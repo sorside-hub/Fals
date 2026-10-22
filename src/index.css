@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #FAF9F5;
+    color: #1C1917;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Paper texture dot grid */
+.paper-pattern {
+  background-color: #FAF9F5;
+  background-image: radial-gradient(#E2DFD7 0.75px, transparent 0.75px);
+  background-size: 20px 20px;
+}
+
+/* Songwriter line spacing */
+.tiptap-editor:focus {
+  outline: none;
+}
+
+.tiptap-editor p {
+  margin: 0;
+  line-height: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.tiptap-editor h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #1C1917;
+}
+
+.tiptap-editor h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #78716C;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.tiptap-editor blockquote {
+  border-left: 2px solid #D6D3D1;
+  padding-left: 0.75rem;
+  color: #57534E;
+  font-style: italic;
+}
+
+/* Custom scrollbar subtle */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E5E4DE;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D4D2C9;
+}

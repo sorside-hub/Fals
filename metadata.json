@@ -1,0 +1,6 @@
+{
+  "name": "FALS",
+  "description": "Belajar teori musik interaktif dari dasar ke mahir, studio lirik TipTap dengan penghitung suku kata, dan bank bar ide rima.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

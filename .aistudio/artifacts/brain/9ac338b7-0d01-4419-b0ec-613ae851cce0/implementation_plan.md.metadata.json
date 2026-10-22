@@ -1,0 +1,6 @@
+{
+  "summary":  "Rencana implementasi Native-Like History, URL Hash Routing (#lyrics, #lyrics/editor, #learn/deep), Mobile Gesture Back Handling, dan Scroll Retention untuk FALS PWA. Mengembalikan navigasi ke daftar lirik/bar/teori saat tombol back browser ditekan, serta memulihkan posisi scroll secara otomatis.",
+  "updatedAt":  "2026-10-22T18:35:33.560736257Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}
