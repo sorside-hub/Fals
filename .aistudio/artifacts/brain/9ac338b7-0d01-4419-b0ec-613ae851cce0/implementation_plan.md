@@ -1,92 +1,116 @@
-# Rencana Revisi: Presisi Alignment Editor Lirik & Minimalis Badge Akor
+# Popup Pemilih Nada Dasar (Key Selector) Interaktif & Standar Teori Musik
 
-Pembaruan tampilan dan tata letak Editor Lirik sesuai feedback: menghilangkan ikon musik pada badge akor, merampingkan popup inspeksi akor (tanpa tombol X ganda di atas), memposisikan kolom suku kata mentok ke kiri dengan box angka yang pas/snug, serta menyempurnakan keselarasan vertikal (alignment center) antara label SEC, angka suku kata, dan baris lirik secara dinamis.
+Menggantikan elemen dropdown `<select>` bawaan browser pada header editor lirik dengan komponen **Key Selector Popup** khusus yang intuitif, mendukung peralihan mode **Mayor / Minor**, tata letak grid **Circle of Fifths (4x3)** dengan penulisan notasi enharmonik standar musik (misal `Db` di mayor menjadi `C#m` di minor), serta kolom input manual untuk nada/akor kustom sesuai tema estetika FALS (*warm paper & charcoal*).
 
-## User Review & Critical Decisions
+---
+
+### User Review & Critical Decisions
 
 > [!IMPORTANT]
-> Penyesuaian spesifik berdasarkan evaluasi tampilan mobile pengguna:
-> - **Badge Akor**: Menghilangkan ikon musik (`♪`) pada badge akor. Badge hanya menampilkan nama akor (misal `[E]`, `[Am]`) dengan gaya visual bersih dan tegas.
-> - **Popup Inspeksi Akor (`ChordInspectionModal`)**: Menghilangkan tombol close `(X)` di header atas karena sudah tersedia tombol "Tutup" yang nyaman dijangkau di bagian bawah modal.
-> - **Gutter Suku Kata Mentok Kiri**: Mempersempit dan menggeser kolom suku kata merapat ke tepi kiri (`w-6 sm:w-7`, tanpa padding kiri berlebih) untuk memaksimalkan lebar horizontal area ketik lirik di mobile.
-> - **Kotak Angka Suku Kata Pas (Snug)**: Menghilangkan padding vertikal tebal agar kotak penampung angka pas membungkus angka (`h-4`, `px-1 py-0`, `text-[10px]`).
-> - **Presisi Alignment Vertikal**: Mengganti perhitungan baris statis dengan sinkronisasi posisi dinamis berbasis `offsetTop` elemen paragraf editor TipTap, sehingga baris yang mengalami *text-wrapping* di mobile atau tag section tidak lagi menyebabkan desinkronisasi baris gutter.
-
-- **Confirmed Decision 1**: Badge akor bersih tanpa ikon musik.
-- **Confirmed Decision 2**: Header modal inspeksi tanpa tombol X; penutupan modal lewat tombol bawah atau klik backdrop.
-- **Confirmed Decision 3**: Kolom metrik mentok kiri dengan kotak angka proporsional dan presisi sejajar baris teks lirik.
+> Keputusan desain yang telah dikonfirmasi oleh pengguna melalui tanya jawab:
+> 1. **Susunan Grid**: Menggunakan format **Circle of Fifths** 4x3 sesuai gambar referensi (C, G, D, A / E, B, F#, Db / Ab, Eb, Bb, F).
+> 2. **Interaksi Pemilihan**: Sekali sentuh/klik tombol nada langsung menerapkan nada ke lagu dan **otomatis menutup popup**.
+> 3. **Input Kustom**: Kolom input manual *"Ketik key lain..."* dan tombol **OK** tetap disediakan untuk nada atau variasi akor khusus.
+> 4. **Penulisan Notasi Standar**: Pada mode minor, nada otomatis menyesuaikan standar enharmonik teoritis musik (misal `Db` menjadi `C#m`, `Ab` menjadi `G#m`, dsb.).
+> 5. **Gaya Visual**: Mengikuti bahasa visual FALS (*warm paper aesthetic* `#FAF9F5`, `#1C1917`, `#E5E4DE`), bukan dark UI flat bawaan screenshot.
 
 ---
 
-## 1. Overview & Core Concept
+### 1. Overview & Core Concept
 
-- **Apa yang Disempurnakan**: Mengeliminasi ketidaksejajaran visual (*misalignment*) antara kolom indikator suku kata kiri dan baris lirik TipTap pada layar ponsel, sekaligus merapikan ruang ketik horizontal agar lebih lapang.
-- **Kenyamanan Penulisan**: Penulis lagu mendapatkan kanvas yang proporsional di mana setiap baris lirik memiliki indikator suku kata tepat di samping baris pertamanya, tanpa pergeseran akibat teks panjang yang turun ke baris berikutnya (*wrap*).
-
----
-
-## 2. User Experience & Visual Design
-
-### Alur & Tampilan Baru:
-1. **Gutter Kiri Super Ramping & Mentok Kiri**:
-   - Kolom suku kata merapat ke sisi kiri (`left-0`, `w-6 sm:w-7`).
-   - Kotak angka suku kata berukuran pas (`h-4 min-w-[18px] text-[10px] leading-none px-1 py-0 rounded-[3px] bg-[#EAE8DF] text-[#44403C]`).
-   - Tag bagian (`SEC`) berukuran kompak (`h-4 text-[9px] font-bold text-[#78716C]`).
-2. **Sinkronisasi Posisi Vertikal Sempurna**:
-   - Setiap indikator baris ditempatkan tepat sejajar vertikal (`flex items-center`) dengan baris pertama paragraf TipTap yang bersangkutan.
-   - Paragraf yang membungkus (*wrapping*) ke 2 baris tidak menggeser baris-baris berikutnya.
-3. **Badge Akor Minimalis**:
-   - Tampilan bersih tanpa ikon nada: `[E]`, `[Am]`, `[F]`, `[G]`.
-   - Mengklik badge membuka popup inspeksi akor.
-4. **Modal Inspeksi Akor Rapi**:
-   - Header modal hanya memuat nama akor, notasi pembentuk, dan tombol audio "Putar Akor".
-   - Tidak ada tombol silang `(X)` di sudut atas; tombol aksi utama "Tutup" di bagian bawah sudah cukup dan mudah dijangkau satu tangan.
+- **Apa yang Dibangun**: Komponen baru `KeySelectorModal` (atau popover dialog) yang dipicu dari tombol nada dasar di header editor lirik (baik desktop maupun mobile).
+- **Target Pengguna**: Penulis lirik & komposer musik yang membutuhkan pemilihan nada dasar secara cepat tanpa repot menggulir dropdown native, dengan notasi musik yang akurat dan jelas.
+- **Nilai Tambah**: Mempermudah transposing dan pemilihan harmoni lagu dengan susunan Circle of Fifths yang musikal, serta menjaga editor lirik tetap bersih dan fokus.
 
 ---
 
-## 3. Key Product Decisions & Trade-Offs
+### 2. User Experience & Visual Design
 
-- **Keputusan 1: Dynamic Layout Sync Menggunakan DOM Paragraph Offsets**
-  - *Pendekatan*: Mengambil `offsetTop` dari setiap anak elemen `editor.view.dom` (paragraf `<p>` dan heading `<h3>`) dan memetakan indikator suku kata pada koordinat vertikal yang sama persis.
-  - *Alasan*: Pendekatan statis `split('\n') * height` gagal total ketika teks lirik membungkus di mobile (seperti terlihat pada screenshot). Menggunakan `offsetTop` menjamin 100% presisi vertikal tanpa peduli berapa baris teks membungkus.
+#### A. Alur Interaksi Pengguna (User Flow)
+1. Pengguna melihat tombol nada dasar di header (contoh: `Key: C` atau `Key: Am`) dengan indikator badge rapi.
+2. Pengguna mengklik tombol tersebut -> muncul popup `KeySelectorModal` dengan latar belakang backdrop halus (`bg-black/30 backdrop-blur-xs`).
+3. Di dalam popup:
+   - **Header**: Label *"PILIH NADA DASAR"* dan tab segmented control **Mayor** / **Minor**.
+   - **Input Bar**: Field *"Ketik key lain..."* + tombol **OK**.
+   - **Grid 4x3**: 12 tombol nada dasar yang responsif terhadap sentuhan jari jempol.
+4. Saat pengguna mengklik salah satu tombol nada di grid:
+   - Nada lagu langsung diperbarui (`onSelectKey(newKey)`).
+   - Popup otomatis menutup dengan transisi halus.
+5. Jika pengguna ingin mengetik nada di luar 12 tombol (contoh `F#m7`, `D/F#`, atau `Eb minor`):
+   - Ketik di input, lalu tekan `Enter` atau tombol **OK** -> nada diterapkan dan popup menutup.
 
-- **Keputusan 2: Pembersihan Elemen Redundan di Modal & Badge**
-  - *Pendekatan*: Menghapus `♪` dari ekstensi TipTap dan menghapus `X` dari header modal.
-  - *Alasan*: Mengurangi *visual clutter* sesuai instruksi pengguna, membuat UI tampak lebih dewasa dan profesional.
+#### B. Pemetaan Enharmonik Nada Standar (Mayor vs Minor)
+| Posisi Kolom | Baris 1 (Mayor / Minor) | Baris 2 (Mayor / Minor) | Baris 3 (Mayor / Minor) |
+| :--- | :--- | :--- | :--- |
+| **Kolom 1** | `C`  / `Cm` | `E`  / `Em` | `Ab` / `G#m` *(standar 5 kres)* |
+| **Kolom 2** | `G`  / `Gm` | `B`  / `Bm` | `Eb` / `Ebm` |
+| **Kolom 3** | `D`  / `Dm` | `F#` / `F#m` | `Bb` / `Bbm` |
+| **Kolom 4** | `A`  / `Am` | `Db` / `C#m` *(sesuai request)* | `F`  / `Fm` |
+
+#### C. Estetika & Desain Sesuai Tema FALS
+- **Latar Modal**: `#FFFFFF` bersih dengan border tipis `#E5E4DE`, rounded sudut `rounded-2xl`, dan bayangan `shadow-2xl`.
+- **Tombol Aktif (Selected Key)**: `#1C1917` (charcoal gelap) dengan teks putih `#FFFFFF` kontras tinggi.
+- **Tombol Normal**: `#FAF9F5` (off-white hangat) dengan border `#E5E4DE`, teks `#1C1917`, dan efek hover/active `#F5F4EE`.
+- **Segmented Control Mayor/Minor**: Kontainer kapsul halus dengan tombol aktif berwarna `#1C1917` (atau charcoal tint) dan tombol nonaktif berteks abu-abu hangat `#78716C`.
+- **Ukuran Sentuhan**: Minimal 42px tinggi per kotak nada pada grid sehingga sangat nyaman dioperasikan oleh jempol di smartphone.
 
 ---
 
-## 4. Technical Architecture & Data Strategy
+### 3. Key Product Decisions & Trade-Offs
+
+- **Circle of Fifths vs Urutan Alfabet Kromatik**:
+  - *Keputusan*: Circle of Fifths 4x3 (C, G, D, A, dst.).
+  - *Alasan*: Pola ini merupakan standar industri workstation musik (DAW) dan mempermudah musisi melihat nada-nada yang bertetangga secara harmonik.
+- **Otomatis Tutup vs Konfirmasi Tombol OK Terpisah pada Grid**:
+  - *Keputusan*: 1 kali klik pada tombol grid langsung mengaplikasikan nada dan menutup popup. Tombol OK hanya berlaku untuk input teks manual.
+  - *Alasan*: Mengurangi jumlah ketukan jari (*friction reduction*) dari 2 tap menjadi 1 tap.
+- **Deteksi Otomatis Mode Mayor/Minor**:
+  - Saat modal dibuka dengan lagu yang sudah bernada `Am` atau `C#m`, modal secara otomatis membuka tab **Minor** dan menyorot tombol `Am` / `C#m`. Jika lagunya `C` atau `G`, modal otomatis membuka tab **Mayor**.
+
+---
+
+### 4. Technical Architecture & Data Strategy
+
+#### Diagram Komponen & Aliran Data
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       LyricEditor                           │
-│                                                             │
-│ ┌────┐ ┌──────────────────────────────────────────────────┐ │
-│ │SEC │ │ [VERSE 1]                                        │ │
-│ │ 11 │ │ Di sudut kamar berteman sepi [E]                 │ │
-│ │ 12 │ │ Kucoba petik senar gitar yang                    │ │
-│ │    │ │ hening [Am] ◄── Wrapped line (tidak bikin geser) │ │
-│ │ 12 │ │ Membuat melodi dari rindu yang perih [F]         │ │
-│ │    │ │                                                  │ │
-│ │SEC │ │ [HOOK]                                           │ │
-│ │  8 │ │ Aku bernyanyi untukmu [C]                        │ │
-│ └────┘ └──────────────────────────────────────────────────┘ │
-│  ▲                                                          │
-│  └─ Mentok kiri, snug box (h-4), diposisikan via offsetTop  │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│ LyricEditor.tsx (State: songKey)                       │
+│                                                        │
+│  [ Header Desktop / Mobile ]                           │
+│  Trigger: <button onClick={() => setOpen(true)}>       │
+│           Key: [C] ▾                                   │
+│  </button>                                             │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (isOpen, songKey, onSelectKey)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ KeySelectorModal.tsx                                   │
+│                                                        │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Header: "PILIH NADA DASAR"   [ Mayor | Minor ]   │  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Input: [Ketik key lain...        ] [ OK ]        │  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Grid 4x3 (Circle of Fifths):                     │  │
+│  │  [ C  ]  [ G  ]  [ D  ]  [ A  ]                  │  │
+│  │  [ E  ]  [ B  ]  [ F# ]  [ Db/C#m ]              │  │
+│  │  [ Ab/G#m ] [ Eb ] [ Bb ] [ F  ]                 │  │
+│  └──────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────┘
 ```
 
-### Langkah-Langkah Pengerjaan:
-1. **Modifikasi `ChordBadgeExtension.ts` & `index.css`**:
-   - Hapus rendering span `♪` (`chord-pill-icon`).
-   - Rapikan padding badge akor inline agar ringkas dan nyaman dibaca berdampingan dengan kata-kata lirik.
-2. **Modifikasi `ChordInspectionModal.tsx`**:
-   - Hapus elemen button close `(X)` dari header kanan atas.
-3. **Penyempurnaan Gutter & Alignment di `LyricEditor.tsx` & `index.css`**:
-   - Sambungkan observer terhadap `editor.view.dom` untuk menghitung `offsetTop` tiap elemen baris secara live.
-   - Set ukuran gutter mentok ke tepi kiri (`w-6 sm:w-7`, padding kiri 0).
-   - Buat box angka suku kata pas dengan angka (`h-4`, `px-1 py-0`, `text-[10px]`, `leading-none`).
-   - Samakan line-height pada `tiptap-editor p` dan `tiptap-editor h3` (`2.25rem` / `36px`) agar titik tengah vertikal (*vertical center*) teks dan badge selalu klop dan presisi.
-4. **Verifikasi**:
-   - Jalankan `compile_applet` dan `lint_applet` untuk memastikan tidak ada regresi kode.
+#### Struktur & Logika File yang Akan Dibuat/Dimodifikasi:
+1. **`/src/components/lyrics/KeySelectorModal.tsx`** *(Baru)*:
+   - Komponen modal popover yang berisi logika pemetaan Circle of Fifths untuk Mayor dan Minor.
+   - Deteksi mode awal berdasarkan akhiran `m` atau nama nada.
+   - Penanganan input teks kustom dengan tombol OK dan tombol `Enter`.
+   - Backdrop click outside & tombol Escape untuk menutup.
+2. **`/src/components/LyricEditor.tsx`**:
+   - Mengganti elemen `<select>` native pada Desktop Header dan Mobile Header dengan tombol pemicu `KeySelectorModal`.
+   - Mengirimkan `songKey` aktif dan callback `handleKeyChange` ke `KeySelectorModal`.
+3. **Verifikasi**:
+   - Memastikan transisi dari `Db` di mayor ke `C#m` di minor konsisten.
+   - Menjalankan `compile_applet` dan `lint_applet`.

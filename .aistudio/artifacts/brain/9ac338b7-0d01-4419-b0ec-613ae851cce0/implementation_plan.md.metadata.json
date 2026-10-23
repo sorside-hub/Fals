@@ -1,6 +1,6 @@
 {
-  "summary":  "Rencana penyempurnaan LyricEditor:\n- Hapus icon musik (♪) pada chord badge di lirik.\n- Hapus tombol (X) di header popup ChordInspectionModal (cukup tombol Tutup di bawah).\n- Geser gutter suku kata mentok kiri (w-6/w-7, pl-0) agar area lirik lebih luas.\n- Sesuaikan box angka suku kata agar pas dengan angka (snug h-4, py-0 px-1).\n- Perbaiki alignment vertikal secara akurat menggunakan dynamic offsetTop & offsetHeight dari DOM TipTap sehingga SEC, angka suku kata, dan baris teks selalu presisi center meskipun teks membungkus (wrap) di mobile.",
-  "updatedAt":  "2026-10-23T15:36:38.625324058Z",
+  "summary":  "Rencana implementasi popup pemilih nada dasar (Key Selector) interaktif menggantikan dropdown bawaan, dilengkapi tab Mayor/Minor, penulisan enharmonik standar (seperti C#m bukan Dbm), susunan grid Circle of Fifths 4x3, dan kolom ketik manual dengan gaya visual tema kertas hangat FALS.",
+  "updatedAt":  "2026-10-23T19:00:04.061035431Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

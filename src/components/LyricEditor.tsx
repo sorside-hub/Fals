@@ -6,10 +6,13 @@ import { CHROMATIC_NOTES } from '../utils/musicTheory';
 import { SongDraft } from '../types';
 import { LyricWritingToolbar } from './lyrics/LyricWritingToolbar';
 import { ChordBadgeNode } from './lyrics/ChordBadgeExtension';
+import { SectionExtension } from './lyrics/SectionExtension';
 import { ChordInspectionModal } from './lyrics/ChordInspectionModal';
+import { KeySelectorModal } from './lyrics/KeySelectorModal';
 import {
   Sparkles,
-  ArrowLeft
+  ArrowLeft,
+  ChevronDown
 } from 'lucide-react';
 
 interface LyricEditorProps {
@@ -43,6 +46,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const [songBpm, setSongBpm] = useState(currentSong.bpm || 95);
   const [songStatus, setSongStatus] = useState<'draft' | 'proses' | 'release'>(currentSong.status || 'draft');
   const [selectedChordForInspection, setSelectedChordForInspection] = useState<string | null>(null);
+  const [isKeySelectorOpen, setIsKeySelectorOpen] = useState(false);
 
   // Initialize TipTap Editor with ChordBadge Extension
   const editor = useEditor({
@@ -53,6 +57,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         },
       }),
       ChordBadgeNode,
+      SectionExtension,
     ],
     content: formatChordsForEditor(
       currentSong.content || '<p>[Verse 1]</p><p>Di sini ku menulis nada yang tertinggal</p><p>Mencari kata yang tak lagi menyangkal</p><p></p><p>[Chorus]</p><p>FALS mengalun di dada yang sunyi</p><p>Harmoni tercipta tanpa batas lagi</p>'
@@ -139,7 +144,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     const text = editor.getText();
     const rawLines = text.split('\n');
     return rawLines.map((line, index) => {
-      const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|hook|outro|intro)/i.test(line);
+      const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|hook|outro|intro|interlude|solo)/i.test(line);
       const syllables = isSectionTag ? 0 : countSyllablesInLine(line);
       return {
         id: index,
@@ -172,7 +177,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         const cleanLyricText = clone.innerText || clone.textContent || '';
 
         const rawText = child.innerText || child.textContent || '';
-        const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|hook|outro|intro)/i.test(rawText);
+        const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|hook|outro|intro|interlude|solo)/i.test(rawText);
         const syllables = isSectionTag ? 0 : countSyllablesInLine(cleanLyricText);
 
         const childRect = child.getBoundingClientRect();
@@ -290,19 +295,19 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
         {/* Right: Key, Status & Bank Bar */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Key selector */}
-          <div className="flex items-center gap-1 px-2.5 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-xs font-mono">
+          {/* Key selector trigger */}
+          <button
+            type="button"
+            onClick={() => setIsKeySelectorOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group"
+            title="Ubah Nada Dasar"
+          >
             <span className="text-[#78716C]">Key:</span>
-            <select
-              value={songKey}
-              onChange={(e) => handleKeyChange(e.target.value)}
-              className="bg-transparent font-bold text-[#1C1917] outline-hidden cursor-pointer"
-            >
-              {CHROMATIC_NOTES.map(note => (
-                <option key={note} value={note}>{note}</option>
-              ))}
-            </select>
-          </div>
+            <span className="font-bold text-[#1C1917] bg-[#F5F4EE] group-hover:bg-[#EAE8DF] px-1.5 py-0.5 rounded border border-[#E5E4DE]">
+              {songKey}
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 text-[#78716C] group-hover:text-[#1C1917]" />
+          </button>
 
           {/* Status selector */}
           <div className="flex items-center gap-1 px-2.5 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-xs font-mono">
@@ -335,19 +340,19 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         {/* Row 1: Key, Status, Bank Bar */}
         <div className="flex items-center justify-between gap-2 pb-1">
           <div className="flex items-center gap-1.5">
-            {/* Key selector */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-md text-[11px] font-mono">
+            {/* Key selector trigger */}
+            <button
+              type="button"
+              onClick={() => setIsKeySelectorOpen(true)}
+              className="flex items-center gap-1 px-2 py-1 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-md text-[11px] font-mono cursor-pointer shadow-2xs group"
+              title="Ubah Nada Dasar"
+            >
               <span className="text-[#78716C]">Key:</span>
-              <select
-                value={songKey}
-                onChange={(e) => handleKeyChange(e.target.value)}
-                className="bg-transparent font-bold text-[#1C1917] outline-hidden cursor-pointer"
-              >
-                {CHROMATIC_NOTES.map(note => (
-                  <option key={note} value={note}>{note}</option>
-                ))}
-              </select>
-            </div>
+              <span className="font-bold text-[#1C1917] bg-[#F5F4EE] px-1 py-0.5 rounded border border-[#E5E4DE]">
+                {songKey}
+              </span>
+              <ChevronDown className="w-3 h-3 text-[#78716C]" />
+            </button>
 
             {/* Status selector */}
             <div className="flex items-center gap-1 px-2 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-md text-[11px] font-mono">
@@ -393,6 +398,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       <LyricWritingToolbar
         variant="auto"
         activeKey={songKey}
+        editorText={editor?.getText() || ''}
         onInsertSection={handleInsertSection}
         onInsertChord={handleInsertChord}
         onDismissKeyboard={handleDismissKeyboard}
@@ -438,6 +444,14 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         isOpen={Boolean(selectedChordForInspection)}
         onClose={() => setSelectedChordForInspection(null)}
         chordSymbol={selectedChordForInspection}
+      />
+
+      {/* 5. Interactive Key Selector Modal (Circle of Fifths & Major/Minor) */}
+      <KeySelectorModal
+        isOpen={isKeySelectorOpen}
+        onClose={() => setIsKeySelectorOpen(false)}
+        currentKey={songKey}
+        onSelectKey={handleKeyChange}
       />
     </div>
   );
