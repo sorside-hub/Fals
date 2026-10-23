@@ -11,10 +11,14 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { useSongs } from './hooks/useSongs';
 import { useBarBank } from './hooks/useBarBank';
 import { useAppNavigation } from './hooks/useAppNavigation';
+import { useVirtualKeyboard } from './hooks/useVirtualKeyboard';
 
 export default function App() {
   // Native History, Hash Routing, and Scroll Retention Engine
   const { route, navigate, goBack } = useAppNavigation();
+
+  // Centralized Virtual Keyboard Hook for Mobile Ergonomics
+  const { isKeyboardVisible } = useVirtualKeyboard();
 
   // Modular state management with custom hooks
   const {
@@ -78,15 +82,20 @@ export default function App() {
   const isBarEditorOpen = route.tab === 'bank' && route.subView === 'editor';
   const isFullScreenEditor = isLyricEditorOpen || isBarEditorOpen;
 
+  // Hide bottom navbar on mobile when keyboard is open in editors
+  const shouldHideBottomNavOnMobile = isFullScreenEditor && isKeyboardVisible;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF9F5] text-[#1C1917] selection:bg-[#EAE8DF]">
       {/* Offline Status Toast */}
       <OfflineIndicator />
 
-      {/* Main Responsive Content Workspace (Header removed for clean, full vertical height) */}
+      {/* Main Responsive Content Workspace */}
       <main
-        className={`flex-1 w-full mx-auto pb-24 md:pb-16 ${
-          isFullScreenEditor
+        className={`flex-1 w-full mx-auto pb-14 md:pb-16 ${
+          isLyricEditorOpen
+            ? 'max-w-6xl px-0 sm:px-6 md:px-8 pt-1 sm:pt-3'
+            : isBarEditorOpen
             ? 'max-w-6xl px-3 sm:px-6 md:px-8 pt-2 sm:pt-3'
             : 'max-w-7xl px-3 sm:px-6 md:px-8 pt-3 sm:pt-6'
         }`}
@@ -164,12 +173,14 @@ export default function App() {
         }}
       />
 
-      {/* Mobile & Desktop Persistent Bottom Navigation (Preserved at all times) */}
-      <BottomNav
-        currentTab={route.tab}
-        onSelectTab={handleSelectTab}
-        bankBarCount={barItems.length}
-      />
+      {/* Persistent Bottom Navigation (Auto-hidden on mobile when keyboard is open in editors) */}
+      <div className={shouldHideBottomNavOnMobile ? 'hidden md:block' : 'block'}>
+        <BottomNav
+          currentTab={route.tab}
+          onSelectTab={handleSelectTab}
+          bankBarCount={barItems.length}
+        />
+      </div>
     </div>
   );
 }

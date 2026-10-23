@@ -1,123 +1,92 @@
-# FALS — Integrasi Native History, URL Hash Routing & Scroll Retention
+# Rencana Revisi: Presisi Alignment Editor Lirik & Minimalis Badge Akor
 
-Implementasi sistem navigasi berbasis riwayat native (*Native-Like History & Gesture Back Handling*) dengan sinkronisasi URL hash (`#lyrics`, `#lyrics/editor/:id`, `#learn/deep/:id`, `#bank/editor/:id`), perlindungan dari keluar aplikasi tidak sengaja, dan pemulihan posisi gulir (*scroll retention*) agar musisi tidak kehilangan posisi baca saat berpindah antara daftar dan editor.
-
----
+Pembaruan tampilan dan tata letak Editor Lirik sesuai feedback: menghilangkan ikon musik pada badge akor, merampingkan popup inspeksi akor (tanpa tombol X ganda di atas), memposisikan kolom suku kata mentok ke kiri dengan box angka yang pas/snug, serta menyempurnakan keselarasan vertikal (alignment center) antara label SEC, angka suku kata, dan baris lirik secara dinamis.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> **Keputusan Arsitektur & Alur Navigasi Terkonfirmasi:**
-> 1. **Sinkronisasi URL Hash Dinamis**:
->    - `#learn` ➔ Halaman utama Ringkasan Teori (Home default).
->    - `#learn/deep/:themeId` ➔ Halaman materi mendalam tema teori (misal `#learn/deep/fondasi`).
->    - `#lyrics` ➔ Halaman Galeri Daftar Lirik Lagu.
->    - `#lyrics/editor/:songId` ➔ Halaman Editor Lirik TipTap Penuh.
->    - `#bank` ➔ Halaman Galeri Bank Bar & Rima.
->    - `#bank/editor/:barId` (atau `new`) ➔ Halaman Editor Bar Penuh.
->    - `#tools` ➔ Halaman Alat Musisi (Metronom, Chord/Scale Explorer).
-> 2. **Perilaku Native Gesture Back (Browser & Smartphone Swipe)**:
->    - **Di dalam Editor**: Menggeser *gesture back* atau menekan tombol back di browser akan mengembalikan pengguna ke halaman daftar yang bersangkutan (misal dari `#lyrics/editor/1` kembali ke `#lyrics`), **BUKAN keluar dari aplikasi**.
->    - **Di Halaman Awal Daftar**: Jika pengguna berada di `#lyrics`, `#bank`, atau `#tools` lalu menekan back, aplikasi akan kembali ke tab `#learn` (Tab Teori Utama) terlebih dahulu sebelum menutup aplikasi.
->    - **Di Jendela Modal**: Jika modal Bank Bar picker sedang terbuka, tombol back akan menutup modal terlebih dahulu.
-> 3. **Scroll Retention Otomatis**:
->    - Posisi gulir layar (`window.scrollY`) dicatat otomatis saat pengguna mengklik kartu.
->    - Ketika kembali dari editor atau modul mendalam ke daftar utama, posisi gulir dipulihkan secara instan sehingga musisi tidak perlu menggulir ulang dari atas.
+> Penyesuaian spesifik berdasarkan evaluasi tampilan mobile pengguna:
+> - **Badge Akor**: Menghilangkan ikon musik (`♪`) pada badge akor. Badge hanya menampilkan nama akor (misal `[E]`, `[Am]`) dengan gaya visual bersih dan tegas.
+> - **Popup Inspeksi Akor (`ChordInspectionModal`)**: Menghilangkan tombol close `(X)` di header atas karena sudah tersedia tombol "Tutup" yang nyaman dijangkau di bagian bawah modal.
+> - **Gutter Suku Kata Mentok Kiri**: Mempersempit dan menggeser kolom suku kata merapat ke tepi kiri (`w-6 sm:w-7`, tanpa padding kiri berlebih) untuk memaksimalkan lebar horizontal area ketik lirik di mobile.
+> - **Kotak Angka Suku Kata Pas (Snug)**: Menghilangkan padding vertikal tebal agar kotak penampung angka pas membungkus angka (`h-4`, `px-1 py-0`, `text-[10px]`).
+> - **Presisi Alignment Vertikal**: Mengganti perhitungan baris statis dengan sinkronisasi posisi dinamis berbasis `offsetTop` elemen paragraf editor TipTap, sehingga baris yang mengalami *text-wrapping* di mobile atau tag section tidak lagi menyebabkan desinkronisasi baris gutter.
+
+- **Confirmed Decision 1**: Badge akor bersih tanpa ikon musik.
+- **Confirmed Decision 2**: Header modal inspeksi tanpa tombol X; penutupan modal lewat tombol bawah atau klik backdrop.
+- **Confirmed Decision 3**: Kolom metrik mentok kiri dengan kotak angka proporsional dan presisi sejajar baris teks lirik.
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **Masalah yang Diselesaikan**: Pada web app / PWA standar, menekan tombol kembali seringkali langsung mengarahkan browser ke halaman luar atau menutup aplikasi. FALS kini berperilaku persis seperti aplikasi native iOS dan Android: tombol kembali mengendalikan tumpukan navigasi internal (*history stack*).
-- **Nilai Bagi Musisi**: Menulis lirik dan ide bar di ponsel menjadi jauh lebih aman dan nyaman; gestur usap kembali (*swipe back*) alami mengembalikan layar ke galeri draf lagu tanpa risiko kehilangan fokus atau posisi scroll.
+- **Apa yang Disempurnakan**: Mengeliminasi ketidaksejajaran visual (*misalignment*) antara kolom indikator suku kata kiri dan baris lirik TipTap pada layar ponsel, sekaligus merapikan ruang ketik horizontal agar lebih lapang.
+- **Kenyamanan Penulisan**: Penulis lagu mendapatkan kanvas yang proporsional di mana setiap baris lirik memiliki indikator suku kata tepat di samping baris pertamanya, tanpa pergeseran akibat teks panjang yang turun ke baris berikutnya (*wrap*).
 
 ---
 
 ## 2. User Experience & Visual Design
 
-### Peta Navigasi & History Stack
-```
-[ #learn (Root Default) ] ◄────────────────────────────────────────┐
-   │                                                               │
-   ├── (Klik Kartu Tema "Pelajari Lebih Dalam")                    │ (Gesture Back
-   │    └──► [ #learn/deep/:themeId ]                              │  dari tab daftar
-   │          └── (Gesture Back) ──► Kembali ke #learn             │  kembali ke #learn)
-   │                                                               │
-   ├── (Pilih Tab Lirik) ──► [ #lyrics (Daftar Lirik) ] ───────────┤
-   │                           │                                   │
-   │                           └── (Klik Lagu / Tulis Baru)        │
-   │                                └──► [ #lyrics/editor/:songId ]│
-   │                                      └── (Gesture Back) ──► Kembali ke #lyrics
-   │                                                               │
-   ├── (Pilih Tab Bank Bar) ─► [ #bank (Daftar Bar) ] ─────────────┤
-   │                             │                                 │
-   │                             └── (Klik Bar / Catat Baru)       │
-   │                                  └──► [ #bank/editor/:barId ] │
-   │                                        └── (Gesture Back) ──► Kembali ke #bank
-   │                                                               │
-   └── (Pilih Tab Alat) ─────► [ #tools ] ─────────────────────────┘
-```
-
-### Visual Identity & Feedback
-- Tidak ada elemen visual baru yang mengganggu; estetika *paper minimalist* putih gading (`#FAF9F5`) dan tinta arang (`#1C1917`) tetap murni.
-- Transisi halaman dan pemulihan scroll terjadi secara halus dan tanpa kedipan layar (*zero flickering*).
+### Alur & Tampilan Baru:
+1. **Gutter Kiri Super Ramping & Mentok Kiri**:
+   - Kolom suku kata merapat ke sisi kiri (`left-0`, `w-6 sm:w-7`).
+   - Kotak angka suku kata berukuran pas (`h-4 min-w-[18px] text-[10px] leading-none px-1 py-0 rounded-[3px] bg-[#EAE8DF] text-[#44403C]`).
+   - Tag bagian (`SEC`) berukuran kompak (`h-4 text-[9px] font-bold text-[#78716C]`).
+2. **Sinkronisasi Posisi Vertikal Sempurna**:
+   - Setiap indikator baris ditempatkan tepat sejajar vertikal (`flex items-center`) dengan baris pertama paragraf TipTap yang bersangkutan.
+   - Paragraf yang membungkus (*wrapping*) ke 2 baris tidak menggeser baris-baris berikutnya.
+3. **Badge Akor Minimalis**:
+   - Tampilan bersih tanpa ikon nada: `[E]`, `[Am]`, `[F]`, `[G]`.
+   - Mengklik badge membuka popup inspeksi akor.
+4. **Modal Inspeksi Akor Rapi**:
+   - Header modal hanya memuat nama akor, notasi pembentuk, dan tombol audio "Putar Akor".
+   - Tidak ada tombol silang `(X)` di sudut atas; tombol aksi utama "Tutup" di bagian bawah sudah cukup dan mudah dijangkau satu tangan.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-1. **Hash-Based Routing (`window.location.hash`)**:
-   - *Pilihan*: Menggunakan URL hash (`#lyrics`, `#lyrics/editor/:id`) dengan `window.history.pushState` dan pendengar event `popstate`.
-   - *Alasan*: Kompatibel 100% dengan lingkungan dev preview AI Studio dan static hosting tanpa memerlukan konfigurasi rewrite server Nginx/Express yang rumit. Deep link juga dapat di-bookmark secara langsung.
-2. **Scroll Memory Manager**:
-   - *Pilihan*: Menyimpan koordinat vertikal `window.scrollY` di dalam memori React ref yang dipetakan ke rute sebelumnya (`scrollMemory.current[route]`).
-   - *Alasan*: Sangat ringan, tidak membebani memori LocalStorage, dan dipulihkan via `requestAnimationFrame` saat transisi `popstate` terjadi.
-3. **Modal History Interception**:
-   - *Pilihan*: Mendaftarkan hash khusus saat modal terbuka (misal `#modal-picker`) sehingga gestur back di ponsel menutup modal terlebih dahulu sebelum berpindah halaman.
+- **Keputusan 1: Dynamic Layout Sync Menggunakan DOM Paragraph Offsets**
+  - *Pendekatan*: Mengambil `offsetTop` dari setiap anak elemen `editor.view.dom` (paragraf `<p>` dan heading `<h3>`) dan memetakan indikator suku kata pada koordinat vertikal yang sama persis.
+  - *Alasan*: Pendekatan statis `split('\n') * height` gagal total ketika teks lirik membungkus di mobile (seperti terlihat pada screenshot). Menggunakan `offsetTop` menjamin 100% presisi vertikal tanpa peduli berapa baris teks membungkus.
+
+- **Keputusan 2: Pembersihan Elemen Redundan di Modal & Badge**
+  - *Pendekatan*: Menghapus `♪` dari ekstensi TipTap dan menghapus `X` dari header modal.
+  - *Alasan*: Mengurangi *visual clutter* sesuai instruksi pengguna, membuat UI tampak lebih dewasa dan profesional.
 
 ---
 
 ## 4. Technical Architecture & Data Strategy
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                   Sistem Navigasi & History FALS                       │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                    useAppNavigation Hook                         │  │
-│  │  - route: ParsedRoute (tab, subView, itemId)                     │  │
-│  │  - pushRoute(newHash): pushState + simpan scrollY rute aktif     │  │
-│  │  - popstate Event Listener: sinkronisasi state + restore scroll  │  │
-│  │  - scrollMemory: Map<string, number>                             │  │
-│  └──────────────────────────────────┬───────────────────────────────┘  │
-│                                     │                                  │
-│                                     ▼                                  │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                        App.tsx Root                              │  │
-│  │  - currentTab sinkron dengan route.tab                           │  │
-│  │  - isLyricEditorOpen sinkron dengan (route.subView === 'editor') │  │
-│  │  - isDeepDiveOpen sinkron dengan (route.subView === 'deep')      │  │
-│  │  - isBarEditorOpen sinkron dengan (route.subView === 'editor')   │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                       LyricEditor                           │
+│                                                             │
+│ ┌────┐ ┌──────────────────────────────────────────────────┐ │
+│ │SEC │ │ [VERSE 1]                                        │ │
+│ │ 11 │ │ Di sudut kamar berteman sepi [E]                 │ │
+│ │ 12 │ │ Kucoba petik senar gitar yang                    │ │
+│ │    │ │ hening [Am] ◄── Wrapped line (tidak bikin geser) │ │
+│ │ 12 │ │ Membuat melodi dari rindu yang perih [F]         │ │
+│ │    │ │                                                  │ │
+│ │SEC │ │ [HOOK]                                           │ │
+│ │  8 │ │ Aku bernyanyi untukmu [C]                        │ │
+│ └────┘ └──────────────────────────────────────────────────┘ │
+│  ▲                                                          │
+│  └─ Mentok kiri, snug box (h-4), diposisikan via offsetTop  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## 5. Rencana Langkah Eksekusi (Implementation Steps)
-
-1. **Pembuatan Hook Navigasi (`src/hooks/useAppNavigation.ts`)**:
-   - Parse `window.location.hash` menjadi objek rute terstruktur (`tab`, `subView`, `id`).
-   - Sediakan fungsi `navigate(targetHash, preserveScroll = false)` menggunakan `window.history.pushState`.
-   - Tangani event `popstate` untuk memicu pembaruan state dan pemulihan `window.scrollTo` ke posisi semula.
-   - Atur default ke `#learn` jika hash kosong.
-2. **Pembaruan `src/App.tsx`**:
-   - Hubungkan state tab dan sub-view (`isLyricEditorOpen`, `isDeepDiveOpen`, `editingBar`) dengan `useAppNavigation`.
-   - Atur agar tombol back pada kartu/header memanggil `navigateBack()` atau `pushRoute()` yang sinkron dengan riwayat browser.
-3. **Pembaruan Komponen Teori, Lirik, dan Bank Bar**:
-   - Pastikan klik kartu lagu di `LyricListView` melakukan push hash `#lyrics/editor/:songId`.
-   - Pastikan klik "Pelajari Lebih Dalam" di `TheoryLearnView` melakukan push hash `#learn/deep/:themeId`.
-   - Pastikan klik kartu bar di `BankBar` melakukan push hash `#bank/editor/:barId`.
-4. **Verifikasi & Build Test**:
-   - Jalankan `compile_applet` dan `lint_applet`.
-   - Uji penekanan tombol back browser dan gesture back di berbagai kedalaman halaman untuk memastikan aplikasi tidak keluar secara prematur.
+### Langkah-Langkah Pengerjaan:
+1. **Modifikasi `ChordBadgeExtension.ts` & `index.css`**:
+   - Hapus rendering span `♪` (`chord-pill-icon`).
+   - Rapikan padding badge akor inline agar ringkas dan nyaman dibaca berdampingan dengan kata-kata lirik.
+2. **Modifikasi `ChordInspectionModal.tsx`**:
+   - Hapus elemen button close `(X)` dari header kanan atas.
+3. **Penyempurnaan Gutter & Alignment di `LyricEditor.tsx` & `index.css`**:
+   - Sambungkan observer terhadap `editor.view.dom` untuk menghitung `offsetTop` tiap elemen baris secara live.
+   - Set ukuran gutter mentok ke tepi kiri (`w-6 sm:w-7`, padding kiri 0).
+   - Buat box angka suku kata pas dengan angka (`h-4`, `px-1 py-0`, `text-[10px]`, `leading-none`).
+   - Samakan line-height pada `tiptap-editor p` dan `tiptap-editor h3` (`2.25rem` / `36px`) agar titik tengah vertikal (*vertical center*) teks dan badge selalu klop dan presisi.
+4. **Verifikasi**:
+   - Jalankan `compile_applet` dan `lint_applet` untuk memastikan tidak ada regresi kode.

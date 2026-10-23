@@ -3,15 +3,13 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
 import { CHROMATIC_NOTES } from '../utils/musicTheory';
-import { sound } from '../utils/audioEngine';
 import { SongDraft } from '../types';
+import { LyricWritingToolbar } from './lyrics/LyricWritingToolbar';
+import { ChordBadgeNode } from './lyrics/ChordBadgeExtension';
+import { ChordInspectionModal } from './lyrics/ChordInspectionModal';
 import {
   Sparkles,
-  ChevronDown,
-  ArrowLeft,
-  Volume2,
-  FolderOpen,
-  Check
+  ArrowLeft
 } from 'lucide-react';
 
 interface LyricEditorProps {
@@ -24,10 +22,17 @@ interface LyricEditorProps {
   onBack?: () => void;
 }
 
+// Helper to convert bracketed chords in plain strings into chord badge spans
+function formatChordsForEditor(rawContent: string): string {
+  if (!rawContent) return '';
+  return rawContent.replace(/\[([A-G][b#]?(?:m|maj|min|dim|aug|sus[24]|add9|[0-9])*)\]/g, (_match, chord) => {
+    return `<span data-chord="${chord}">[${chord}]</span>`;
+  });
+}
+
 export const LyricEditor: React.FC<LyricEditorProps> = ({
   currentSong,
   onUpdateSong,
-  onOpenSongManager,
   onOpenBarBankModal,
   insertedBarText,
   onClearInsertedBar,
@@ -37,10 +42,9 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const [songKey, setSongKey] = useState(currentSong.key || 'C');
   const [songBpm, setSongBpm] = useState(currentSong.bpm || 95);
   const [songStatus, setSongStatus] = useState<'draft' | 'proses' | 'release'>(currentSong.status || 'draft');
-  const [lastSaved, setLastSaved] = useState<string>('Tersimpan');
-  const [showChordTray, setShowChordTray] = useState(false);
+  const [selectedChordForInspection, setSelectedChordForInspection] = useState<string | null>(null);
 
-  // Initialize TipTap Editor with comfortable leading and full width
+  // Initialize TipTap Editor with ChordBadge Extension
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -48,11 +52,26 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
           levels: [2, 3],
         },
       }),
+      ChordBadgeNode,
     ],
-    content: currentSong.content || '<p>[Verse 1]</p><p>Di sini ku menulis nada yang tertinggal</p><p>Mencari kata yang tak lagi menyangkal</p><p></p><p>[Chorus]</p><p>FALS mengalun di dada yang sunyi</p><p>Harmoni tercipta tanpa batas lagi</p>',
+    content: formatChordsForEditor(
+      currentSong.content || '<p>[Verse 1]</p><p>Di sini ku menulis nada yang tertinggal</p><p>Mencari kata yang tak lagi menyangkal</p><p></p><p>[Chorus]</p><p>FALS mengalun di dada yang sunyi</p><p>Harmoni tercipta tanpa batas lagi</p>'
+    ),
     editorProps: {
       attributes: {
-        class: 'tiptap-editor focus:outline-hidden min-h-[500px] text-[16px] sm:text-[17px] text-[#1C1917] leading-[2.5rem] font-normal px-2 sm:px-4',
+        class: 'tiptap-editor focus:outline-hidden min-h-[500px] text-[16px] sm:text-[17px] text-[#1C1917] leading-[2.25rem] font-normal px-1 sm:px-2',
+      },
+      handleClick: (_view, _pos, event) => {
+        const target = event.target as HTMLElement | null;
+        const badge = target?.closest('.chord-badge, [data-chord]') as HTMLElement | null;
+        if (badge) {
+          const chord = badge.getAttribute('data-chord') || badge.textContent?.replace(/[\[\]]/g, '').trim();
+          if (chord) {
+            setSelectedChordForInspection(chord);
+            return true;
+          }
+        }
+        return false;
       },
     },
     onUpdate: ({ editor }) => {
@@ -65,7 +84,6 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         content: html,
         updatedAt: Date.now(),
       });
-      setLastSaved('Baru disimpan');
     },
   });
 
@@ -74,7 +92,6 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     if (insertedBarText && editor) {
       editor.commands.insertContent(`<p>${insertedBarText}</p>`);
       if (onClearInsertedBar) onClearInsertedBar();
-      setLastSaved('Bar disisipkan');
     }
   }, [insertedBarText, editor, onClearInsertedBar]);
 
@@ -106,85 +123,220 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     });
   };
 
-  // Calculate live syllable counts per line
-  const linesInfo = useMemo(() => {
+  // Dynamic vertical layout sync for gutter items
+  interface GutterItem {
+    id: string | number;
+    top: number;
+    syllables: number;
+    isSectionTag: boolean;
+  }
+
+  const [gutterItems, setGutterItems] = useState<GutterItem[]>([]);
+
+  // Fallback initial items to prevent any visual jump before DOM nodes are mounted
+  const fallbackItems = useMemo<GutterItem[]>(() => {
     if (!editor) return [];
     const text = editor.getText();
     const rawLines = text.split('\n');
-
     return rawLines.map((line, index) => {
-      const syllables = countSyllablesInLine(line);
       const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|hook|outro|intro)/i.test(line);
+      const syllables = isSectionTag ? 0 : countSyllablesInLine(line);
       return {
-        lineIndex: index + 1,
-        lineText: line,
+        id: index,
+        top: index * 36,
         syllables,
         isSectionTag,
-        isEmpty: line.trim() === '',
       };
     });
   }, [editor?.getText()]);
 
-  // Common chords for the chosen song key
-  const availableChords = useMemo(() => {
-    const root = songKey;
-    return [
-      { name: root, intervals: [0, 4, 7] },
-      { name: `${root}maj7`, intervals: [0, 4, 7, 11] },
-      { name: `${root}add9`, intervals: [0, 4, 7, 14] },
-      { name: `${root}sus2`, intervals: [0, 2, 7] },
-      { name: `${root}sus4`, intervals: [0, 5, 7] },
-    ];
-  }, [songKey]);
+  // Sync gutter positions accurately to DOM element rects
+  useEffect(() => {
+    if (!editor || !editor.view?.dom) return;
+
+    const dom = editor.view.dom;
+
+    const measureGutter = () => {
+      const editorRect = dom.getBoundingClientRect();
+      const children = Array.from(dom.children) as HTMLElement[];
+
+      if (children.length === 0) {
+        setGutterItems([]);
+        return;
+      }
+
+      const items: GutterItem[] = children.map((child, index) => {
+        // Clone child and strip all chord badges so chords are completely ignored in syllable counting
+        const clone = child.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll('.chord-badge, [data-chord]').forEach((badge) => badge.remove());
+        const cleanLyricText = clone.innerText || clone.textContent || '';
+
+        const rawText = child.innerText || child.textContent || '';
+        const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|hook|outro|intro)/i.test(rawText);
+        const syllables = isSectionTag ? 0 : countSyllablesInLine(cleanLyricText);
+
+        const childRect = child.getBoundingClientRect();
+        // Exact pixel top relative to the top of editor.view.dom
+        const top = childRect.top - editorRect.top;
+
+        return {
+          id: index,
+          top,
+          syllables,
+          isSectionTag,
+        };
+      });
+
+      setGutterItems(items);
+    };
+
+    // Initial measurement
+    const rafId = requestAnimationFrame(measureGutter);
+
+    // ResizeObserver on editor DOM and its children
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(measureGutter);
+    });
+    resizeObserver.observe(dom);
+    Array.from(dom.children).forEach((child) => resizeObserver.observe(child));
+
+    // MutationObserver on DOM changes
+    const mutationObserver = new MutationObserver(() => {
+      requestAnimationFrame(measureGutter);
+      Array.from(dom.children).forEach((child) => resizeObserver.observe(child));
+    });
+    mutationObserver.observe(dom, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [editor, editor?.state.doc]);
+
+  const activeGutterItems = gutterItems.length > 0 ? gutterItems : fallbackItems;
 
   // Insert section heading into TipTap
-  const insertSection = (sectionName: string) => {
+  const handleInsertSection = (sectionName: string) => {
     if (!editor) return;
     editor.chain().focus().insertContent(`<h3>[${sectionName}]</h3><p></p>`).run();
   };
 
-  // Insert chord symbol at cursor
-  const insertChord = (chordSymbol: string) => {
+  // Insert chord symbol as interactive ChordBadgeNode at cursor
+  const handleInsertChord = (chordSymbol: string) => {
     if (!editor) return;
-    editor.chain().focus().insertContent(`[${chordSymbol}] `).run();
-    sound.playChord(songKey, [0, 4, 7]);
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: 'chordBadge',
+        attrs: { chord: chordSymbol }
+      })
+      .insertContent(' ')
+      .run();
+  };
+
+  // Dismiss keyboard explicitly
+  const handleDismissKeyboard = () => {
+    if (editor) {
+      editor.commands.blur();
+    }
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  // Fallback click listener on editor container for chord badges
+  const handleEditorContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    const badge = target?.closest('.chord-badge, [data-chord]') as HTMLElement | null;
+    if (badge) {
+      const chord = badge.getAttribute('data-chord') || badge.textContent?.replace(/[\[\]]/g, '').trim();
+      if (chord) {
+        setSelectedChordForInspection(chord);
+      }
+    }
   };
 
   return (
     <div className="w-full flex flex-col bg-[#FAF9F5] min-h-[calc(100vh-140px)] animate-fade-in">
-      {/* 1. Sticky Minimalist Context Header (Edge-to-Edge) */}
-      <div className="sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] pb-2 pt-1">
-        {/* Navigation & Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 py-1">
-          {/* Back button */}
+      {/* 1. Adaptive Header */}
+      {/* DESKTOP HEADER (1 Single Row: [←] + Title + Key + Status + Bank Bar) */}
+      <div className="hidden md:flex sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] py-2.5 items-center justify-between gap-3">
+        {/* Left: Back button (icon only) & Big Inline Title */}
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
           {onBack && (
             <button
               onClick={onBack}
-              className="flex items-center gap-1.5 text-xs font-semibold text-[#1C1917] hover:bg-[#F5F4EE] px-2.5 py-1.5 rounded-lg border border-[#E5E4DE] transition cursor-pointer"
+              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-[#E5E4DE] bg-[#FFFFFF] hover:bg-[#F5F4EE] text-[#1C1917] transition cursor-pointer shadow-2xs"
+              title="Kembali ke Daftar Lirik"
             >
               <ArrowLeft className="w-4 h-4 text-[#57534E]" />
-              <span>Daftar Lirik</span>
             </button>
           )}
 
-          {/* Metadata & Actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Status selector */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-xs font-mono">
-              <span className="text-[#78716C]">Status:</span>
-              <select
-                value={songStatus}
-                onChange={(e) => handleStatusChange(e.target.value as any)}
-                className="bg-transparent font-semibold text-[#1C1917] outline-hidden cursor-pointer"
-              >
-                <option value="draft">Draft</option>
-                <option value="proses">Proses</option>
-                <option value="release">Release</option>
-              </select>
-            </div>
+          <input
+            type="text"
+            value={songTitle}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            placeholder="Judul lagumu..."
+            className="flex-1 text-2xl font-extrabold text-[#1C1917] bg-transparent border-none outline-hidden tracking-tight placeholder:text-[#A8A29E] min-w-0"
+          />
+        </div>
 
+        {/* Right: Key, Status & Bank Bar */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Key selector */}
+          <div className="flex items-center gap-1 px-2.5 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-xs font-mono">
+            <span className="text-[#78716C]">Key:</span>
+            <select
+              value={songKey}
+              onChange={(e) => handleKeyChange(e.target.value)}
+              className="bg-transparent font-bold text-[#1C1917] outline-hidden cursor-pointer"
+            >
+              {CHROMATIC_NOTES.map(note => (
+                <option key={note} value={note}>{note}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status selector */}
+          <div className="flex items-center gap-1 px-2.5 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-xs font-mono">
+            <span className="text-[#78716C]">Status:</span>
+            <select
+              value={songStatus}
+              onChange={(e) => handleStatusChange(e.target.value as any)}
+              className="bg-transparent font-semibold text-[#1C1917] outline-hidden cursor-pointer"
+            >
+              <option value="draft">Draft</option>
+              <option value="proses">Proses</option>
+              <option value="release">Release</option>
+            </select>
+          </div>
+
+          {/* Bank Bar Shortcut */}
+          <button
+            onClick={onOpenBarBankModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#1C1917] bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs"
+            title="Buka Bank Bar untuk comot ide rima"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
+            <span>Bank Bar</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MOBILE HEADER (2 Rows: Row 1 = Controls, Row 2 = Full Title) */}
+      <div className="md:hidden sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] pt-1.5 pb-2 px-3">
+        {/* Row 1: Key, Status, Bank Bar */}
+        <div className="flex items-center justify-between gap-2 pb-1">
+          <div className="flex items-center gap-1.5">
             {/* Key selector */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-xs font-mono">
+            <div className="flex items-center gap-1 px-2 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-md text-[11px] font-mono">
               <span className="text-[#78716C]">Key:</span>
               <select
                 value={songKey}
@@ -197,99 +349,78 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
               </select>
             </div>
 
+            {/* Status selector */}
+            <div className="flex items-center gap-1 px-2 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-md text-[11px] font-mono">
+              <span className="text-[#78716C]">Status:</span>
+              <select
+                value={songStatus}
+                onChange={(e) => handleStatusChange(e.target.value as any)}
+                className="bg-transparent font-semibold text-[#1C1917] outline-hidden cursor-pointer"
+              >
+                <option value="draft">Draft</option>
+                <option value="proses">Proses</option>
+                <option value="release">Release</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
             {/* Bank Bar Shortcut Button */}
             <button
               onClick={onOpenBarBankModal}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-[#1C1917] bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer"
-              title="Buka Bank Bar untuk comot ide rima"
+              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-[#1C1917] bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-md transition cursor-pointer shadow-2xs"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
+              <Sparkles className="w-3 h-3 text-[#57534E]" />
               <span>Bank Bar</span>
             </button>
-
-            {/* Auto-saved indicator */}
-            <span className="text-[11px] font-mono text-[#78716C] px-1 hidden sm:inline">
-              {lastSaved}
-            </span>
           </div>
         </div>
 
-        {/* Big Seamless Document Title Input */}
-        <div className="pt-2">
+        {/* Row 2: Big full-width Title Input */}
+        <div className="pt-1">
           <input
             type="text"
             value={songTitle}
             onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="Ketik judul lagumu di sini..."
-            className="w-full text-2xl sm:text-3xl font-extrabold text-[#1C1917] bg-transparent border-none outline-hidden tracking-tight placeholder:text-[#A8A29E]"
+            placeholder="Judul lagumu..."
+            className="w-full text-xl font-extrabold text-[#1C1917] bg-transparent border-none outline-hidden tracking-tight placeholder:text-[#A8A29E]"
           />
         </div>
       </div>
 
-      {/* 2. Fluid Section & Chord Toolbar */}
-      <div className="py-2.5 border-b border-[#F0EFEA] flex flex-wrap items-center justify-between gap-2 text-xs">
-        {/* Section Tags */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <span className="text-[#78716C] mr-1 font-mono text-[11px] shrink-0">Sisip Bagian:</span>
-          {['Verse', 'Pre-Chorus', 'Chorus', 'Bridge', 'Hook', 'Outro'].map(sec => (
-            <button
-              key={sec}
-              onClick={() => insertSection(sec)}
-              className="px-2.5 py-1 rounded-md text-[11px] font-mono bg-[#FFFFFF] border border-[#E5E4DE] text-[#44403C] hover:bg-[#F5F4EE] hover:text-[#1C1917] cursor-pointer whitespace-nowrap transition"
+      {/* 2. Self-Contained Modular Toolbar */}
+      {/* Desktop: renders as sticky header strip. Mobile: renders dynamically docked directly above keyboard */}
+      <LyricWritingToolbar
+        variant="auto"
+        activeKey={songKey}
+        onInsertSection={handleInsertSection}
+        onInsertChord={handleInsertChord}
+        onDismissKeyboard={handleDismissKeyboard}
+      />
+
+      {/* 3. Main Full-Screen Writing Canvas */}
+      <div
+        className="relative flex flex-1 w-full min-h-[550px] bg-[#FAF9F5] paper-pattern pt-2 pb-16"
+        onClick={handleEditorContainerClick}
+      >
+        {/* Left Gutter: Live Syllable Count Only - Flush to left edge ("mentok kiri") */}
+        <div className="w-6 sm:w-7 shrink-0 select-none border-r border-[#E5E4DE]/60 bg-[#FAF9F5] relative pointer-events-none">
+          {activeGutterItems.map((item) => (
+            <div
+              key={item.id}
+              style={{ transform: `translateY(${item.top}px)` }}
+              className="absolute left-0 top-0 w-full h-[2.25rem] flex items-center justify-center pointer-events-none"
             >
-              +{sec}
-            </button>
-          ))}
-        </div>
-
-        {/* Toggle Chord Inserter */}
-        <button
-          onClick={() => setShowChordTray(prev => !prev)}
-          className="flex items-center gap-1 text-[11px] font-mono text-[#57534E] hover:text-[#1C1917] px-2 py-1 rounded bg-[#FFFFFF] border border-[#E5E4DE] cursor-pointer ml-auto"
-        >
-          <span>Sisip Akor ({songKey})</span>
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showChordTray ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
-
-      {/* Collapsible Chord Inserter Bar */}
-      {showChordTray && (
-        <div className="py-2 px-1 border-b border-[#E5E4DE] flex items-center gap-1.5 overflow-x-auto scrollbar-none text-xs bg-[#F5F4EE]/60">
-          <span className="text-[11px] font-mono text-[#78716C] shrink-0 mr-1">Klik sisip akor:</span>
-          {availableChords.map(c => (
-            <button
-              key={c.name}
-              onClick={() => insertChord(c.name)}
-              className="px-2.5 py-1 rounded-md font-mono font-medium text-[11px] bg-[#FFFFFF] border border-[#D6D3D1] text-[#1C1917] hover:bg-[#FAF9F5] hover:border-[#1C1917] transition cursor-pointer flex items-center gap-1"
-            >
-              <span>[{c.name}]</span>
-            </button>
-          ))}
-          <button
-            onClick={() => sound.playChord(songKey, [0, 4, 7])}
-            className="p-1 rounded text-[#78716C] hover:text-[#1C1917] ml-auto cursor-pointer"
-            title="Dengarkan akor dasar"
-          >
-            <Volume2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* 3. Full-Screen Writing Canvas (Zero Box/Card, Max Horizontal Space) */}
-      <div className="relative flex flex-1 w-full min-h-[550px] bg-[#FAF9F5] paper-pattern mt-1">
-        {/* Left Column: Line Numbers & Live Syllable Count */}
-        <div className="w-12 sm:w-16 shrink-0 py-2 select-none border-r border-[#E5E4DE]/60 bg-[#FAF9F5] font-mono text-[11px] text-[#A8A29E] flex flex-col items-center leading-[2.5rem]">
-          {linesInfo.map((info) => (
-            <div key={info.lineIndex} className="h-[2.5rem] flex items-center justify-between w-full px-1.5 sm:px-2">
-              <span className="text-[10px] text-[#A8A29E]">{info.lineIndex}</span>
-              {info.isSectionTag ? (
-                <span className="text-[9px] font-semibold text-[#78716C]">SEC</span>
-              ) : info.syllables > 0 ? (
+              {item.isSectionTag ? (
+                <span className="text-[9px] font-mono font-bold text-[#78716C] tracking-tight leading-none">
+                  SEC
+                </span>
+              ) : item.syllables > 0 ? (
                 <span
-                  className="text-[10px] font-medium px-1 rounded bg-[#EAE8DF] text-[#44403C]"
-                  title={`${info.syllables} suku kata di baris ini`}
+                  className="inline-flex items-center justify-center px-1 py-0 h-4 min-w-[17px] text-[10px] font-mono font-bold rounded-[3px] bg-[#EAE8DF] text-[#44403C] leading-none tabular-nums shadow-2xs"
+                  title={`${item.syllables} suku kata`}
                 >
-                  {info.syllables}k
+                  {item.syllables}
                 </span>
               ) : null}
             </div>
@@ -297,23 +428,17 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         </div>
 
         {/* TipTap Document Area: Expands across full horizontal canvas */}
-        <div className="flex-1 py-2 px-2 sm:px-6 md:px-8 overflow-y-auto">
+        <div className="flex-1 min-w-0 pl-1.5 sm:pl-3 pr-3 sm:pr-4">
           <EditorContent editor={editor} />
         </div>
       </div>
 
-      {/* Subtle Writing Status Footer */}
-      <div className="py-3 border-t border-[#E5E4DE]/60 flex items-center justify-between text-xs text-[#78716C]">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-          <span className="font-mono text-[11px]">
-            {linesInfo.filter(l => !l.isEmpty && !l.isSectionTag).length} baris lirik aktif
-          </span>
-        </div>
-        <div className="font-mono text-[11px] text-[#A8A29E]">
-          {linesInfo.reduce((sum, l) => sum + (l.isSectionTag ? 0 : l.syllables), 0)} suku kata total
-        </div>
-      </div>
+      {/* 4. Interactive Chord Inspection Modal (Piano Roll & Guitar Fretboard) */}
+      <ChordInspectionModal
+        isOpen={Boolean(selectedChordForInspection)}
+        onClose={() => setSelectedChordForInspection(null)}
+        chordSymbol={selectedChordForInspection}
+      />
     </div>
   );
 };

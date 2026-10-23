@@ -25,22 +25,44 @@ export function countSyllablesInWord(word: string): number {
   return Math.max(1, count);
 }
 
+// Regular expression to match standard chord notations (e.g. C, Am, G7, F#m, Esus2, Eadd9, Bbmaj7, D/F#)
+export const CHORD_PATTERN = /^[A-G][b#]?(?:m|maj|min|dim|aug|sus[24]?|add[0-9]+|[0-9]+)*(?:\/[A-G][b#]?)?$/;
+
+export function isChordToken(token: string): boolean {
+  const clean = token.trim().replace(/^[\(\[\{]/, '').replace(/[\)\]\}]$/, '');
+  return CHORD_PATTERN.test(clean);
+}
+
 export function countSyllablesInLine(line: string): number {
-  // Strip chord annotations like [Cmaj7] or (Am) if present in lyric line
-  const textWithoutChords = line
-    .replace(/\[[^\]]*\]/g, '')
-    .replace(/\([A-G][b#]?[a-zA-Z0-9]*\)/g, '')
+  if (!line) return 0;
+
+  // 1. Strip anything inside brackets [..] or parentheses (..) entirely (chords, tags, notes)
+  let text = line
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\([^\)]*\)/g, ' ')
     .trim();
 
-  if (!textWithoutChords) return 0;
-  
-  // Ignore section tags like [Verse], [Chorus]
-  if (/^(verse|chorus|bridge|pre-chorus|hook|outro|intro)/i.test(textWithoutChords.replace(/[:\-]/g, ''))) {
+  if (!text) return 0;
+
+  // 2. Ignore section headings if written without brackets
+  if (/^(verse|chorus|bridge|pre-chorus|hook|outro|intro|reff)/i.test(text.replace(/[:\-]/g, ''))) {
     return 0;
   }
 
-  const words = textWithoutChords.split(/\s+/).filter(Boolean);
-  return words.reduce((total, word) => total + countSyllablesInWord(word), 0);
+  // 3. Split by whitespace into individual words
+  const tokens = text.split(/\s+/).filter(Boolean);
+
+  // 4. Filter out any words that are chords or pure numbers
+  const lyricWords = tokens.filter((token) => {
+    if (isChordToken(token)) return false;
+    if (/^[0-9]+$/.test(token)) return false;
+    return true;
+  });
+
+  // If the line consists only of chords (e.g. "Am F C G" or "Esus2 Eadd9"), do not count any syllables
+  if (lyricWords.length === 0) return 0;
+
+  return lyricWords.reduce((total, word) => total + countSyllablesInWord(word), 0);
 }
 
 // Find words that end in similar rhyme sound

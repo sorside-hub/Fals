@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { BarItem, BarCategory } from '../../types';
 import { countSyllablesInLine } from '../../utils/syllableCounter';
+import { BarWritingToolbar } from './BarWritingToolbar';
 import {
   ArrowLeft,
   Save,
@@ -9,8 +10,7 @@ import {
   Check,
   Tag,
   Plus,
-  X,
-  Sparkles
+  X
 } from 'lucide-react';
 
 interface BarEditorViewProps {
@@ -91,9 +91,15 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
     }
   };
 
+  const handleDismissKeyboard = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
   return (
     <div className="w-full flex flex-col bg-[#FAF9F5] min-h-[calc(100vh-140px)] animate-fade-in">
-      {/* 1. Sticky Minimalist Context Header (Edge-to-Edge) */}
+      {/* 1. Sticky Minimalist Context Header */}
       <div className="sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] pb-3 pt-1">
         <div className="flex flex-wrap items-center justify-between gap-3 py-1">
           {/* Back button */}
@@ -195,7 +201,15 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Full-Screen Writing Canvas (Zero Box/Card, Max Horizontal Space) */}
+      {/* 2. Self-Contained Modular Toolbar (Desktop sticky strip + Mobile docked keyboard accessory) */}
+      <BarWritingToolbar
+        variant="auto"
+        rhymeScheme={rhymeScheme}
+        onSelectRhymeScheme={setRhymeScheme}
+        onDismissKeyboard={handleDismissKeyboard}
+      />
+
+      {/* 3. Full-Screen Writing Canvas */}
       <div className="relative flex flex-1 w-full min-h-[480px] bg-[#FAF9F5] paper-pattern mt-1">
         {/* Left Column: Line Numbers & Live Syllable Count */}
         <div className="w-12 sm:w-16 shrink-0 py-3 select-none border-r border-[#E5E4DE]/60 bg-[#FAF9F5] font-mono text-[11px] text-[#A8A29E] flex flex-col items-center leading-[2.5rem]">
@@ -227,7 +241,7 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
         </div>
       </div>
 
-      {/* 3. Integrated Tags Section */}
+      {/* 4. Integrated Tags Section */}
       <div className="py-3 border-t border-[#E5E4DE]/70 space-y-2">
         <div className="flex items-center justify-between text-xs font-semibold text-[#78716C]">
           <span className="flex items-center gap-1.5 uppercase font-mono text-[11px]">
