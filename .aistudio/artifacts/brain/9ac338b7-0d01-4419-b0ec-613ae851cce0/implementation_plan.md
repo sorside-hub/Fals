@@ -1,116 +1,106 @@
-# Popup Pemilih Nada Dasar (Key Selector) Interaktif & Standar Teori Musik
+# Rencana Implementasi: Drawer Rekomendasi Family Chord & Non-Keyboard Chord Inspection
 
-Menggantikan elemen dropdown `<select>` bawaan browser pada header editor lirik dengan komponen **Key Selector Popup** khusus yang intuitif, mendukung peralihan mode **Mayor / Minor**, tata letak grid **Circle of Fifths (4x3)** dengan penulisan notasi enharmonik standar musik (misal `Db` di mayor menjadi `C#m` di minor), serta kolom input manual untuk nada/akor kustom sesuai tema estetika FALS (*warm paper & charcoal*).
+Berdasarkan diskusi dan klarifikasi, toolbar editor lirik akan dirapikan dengan menyatukan tombol-tombol chord menjadi **1 tombol tunggal "+ Akor"** yang membuka **Drawer Bottom Sheet** (seperti Drawer Bank Bar), menyajikan **rekomendasi family chord** lengkap sesuai nada dasar yang dipilih di header (tingkat I-vi + variasi/ekstensi), serta memperbaiki interaksi klik pada badge chord di teks agar **tidak memunculkan keyboard virtual**.
 
 ---
 
 ### User Review & Critical Decisions
 
 > [!IMPORTANT]
-> Keputusan desain yang telah dikonfirmasi oleh pengguna melalui tanya jawab:
-> 1. **Susunan Grid**: Menggunakan format **Circle of Fifths** 4x3 sesuai gambar referensi (C, G, D, A / E, B, F#, Db / Ab, Eb, Bb, F).
-> 2. **Interaksi Pemilihan**: Sekali sentuh/klik tombol nada langsung menerapkan nada ke lagu dan **otomatis menutup popup**.
-> 3. **Input Kustom**: Kolom input manual *"Ketik key lain..."* dan tombol **OK** tetap disediakan untuk nada atau variasi akor khusus.
-> 4. **Penulisan Notasi Standar**: Pada mode minor, nada otomatis menyesuaikan standar enharmonik teoritis musik (misal `Db` menjadi `C#m`, `Ab` menjadi `G#m`, dsb.).
-> 5. **Gaya Visual**: Mengikuti bahasa visual FALS (*warm paper aesthetic* `#FAF9F5`, `#1C1917`, `#E5E4DE`), bukan dark UI flat bawaan screenshot.
+> Keputusan dan preferensi yang telah disepakati:
+> 1. **Klik Badge Chord Tanpa Keyboard**: Saat pengguna mengklik badge chord di dalam teks (baik saat kursor aktif atau tidak), keyboard virtual HP **tidak boleh muncul sama sekali**, dan langsung membuka modal diagram tuts piano / fretboard gitar.
+> 2. **Bentuk Tampilan Toolbar**: Seluruh tombol akor individual di toolbar mobile dan desktop disatukan menjadi **1 tombol "+ Akor"** (sama rapinya seperti tombol `+ Bagian`).
+> 3. **Bentuk Tampilan Menu Akor**: Membuka **Drawer Bottom Sheet** bergaya Bank Bar (slide-up dari bawah di mobile dengan grab-handle, modal elegan di desktop).
+> 4. **Cakupan Akor Berdasarkan Key**:
+>    - **Family Chord Utama (Tingkat I - vi)**: Ditentukan secara otomatis dari nada dasar yang dipilih (misal Key D -> `D`, `Em`, `F#m`, `G`, `A`, `Bm`, `C#dim`).
+>    - **Variasi & Ekstensi Populer**: Akor `7`, `maj7`, `sus2`, `sus4`, `add9`, dan slash chords (`D/F#`, `G/B`).
+>    - **Kamus Akor & Pencarian**: Kolom pencarian untuk menemukan atau menyisipkan akor khusus apa saja secara instan.
+>    - **Pratinjau Suara**: Tombol audio untuk mendengarkan bunyi akor sebelum disisipkan.
 
 ---
 
 ### 1. Overview & Core Concept
 
-- **Apa yang Dibangun**: Komponen baru `KeySelectorModal` (atau popover dialog) yang dipicu dari tombol nada dasar di header editor lirik (baik desktop maupun mobile).
-- **Target Pengguna**: Penulis lirik & komposer musik yang membutuhkan pemilihan nada dasar secara cepat tanpa repot menggulir dropdown native, dengan notasi musik yang akurat dan jelas.
-- **Nilai Tambah**: Mempermudah transposing dan pemilihan harmoni lagu dengan susunan Circle of Fifths yang musikal, serta menjaga editor lirik tetap bersih dan fokus.
+- **Apa yang Dibangun**:
+  1. Interseptor event pada badge chord di TipTap editor (`pointerdown` stopPropagation + preventDefault + blur) sehingga virtual keyboard tidak pernah terbuka saat badge chord disentuh.
+  2. Komponen baru `ChordDrawerModal.tsx` yang dirancang seperti `BankBarPickerModal` (drawer di mobile, dialog di desktop).
+  3. Mesin kalkulasi teori musik `getFamilyChords(key)` untuk menghasilkan harmoni diatonik akor keluarga (Mayor: I, ii, iii, IV, V, vi; Minor: i, ii°, III, iv, v/V, VI, VII) dan variasinya.
+  4. Penyederhanaan toolbar desktop & mobile: 1 tombol `+ Bagian` dan 1 tombol `+ Akor`.
 
 ---
 
 ### 2. User Experience & Visual Design
 
-#### A. Alur Interaksi Pengguna (User Flow)
-1. Pengguna melihat tombol nada dasar di header (contoh: `Key: C` atau `Key: Am`) dengan indikator badge rapi.
-2. Pengguna mengklik tombol tersebut -> muncul popup `KeySelectorModal` dengan latar belakang backdrop halus (`bg-black/30 backdrop-blur-xs`).
-3. Di dalam popup:
-   - **Header**: Label *"PILIH NADA DASAR"* dan tab segmented control **Mayor** / **Minor**.
-   - **Input Bar**: Field *"Ketik key lain..."* + tombol **OK**.
-   - **Grid 4x3**: 12 tombol nada dasar yang responsif terhadap sentuhan jari jempol.
-4. Saat pengguna mengklik salah satu tombol nada di grid:
-   - Nada lagu langsung diperbarui (`onSelectKey(newKey)`).
-   - Popup otomatis menutup dengan transisi halus.
-5. Jika pengguna ingin mengetik nada di luar 12 tombol (contoh `F#m7`, `D/F#`, atau `Eb minor`):
-   - Ketik di input, lalu tekan `Enter` atau tombol **OK** -> nada diterapkan dan popup menutup.
+#### A. Alur Interaksi Klik Badge Chord (Bebas Keyboard)
+```
+Pengguna tap badge [Dmaj7] di dalam teks lirik
+       │
+       ▼
+TipTap editorProps.handleDOMEvents.pointerdown
+       │
+       ├─► event.preventDefault() (Cegah contenteditable mengambil fokus)
+       ├─► event.stopPropagation() (Cegah touch bubbling ke OS keyboard)
+       ├─► document.activeElement?.blur() (Tutup keyboard jika sempat aktif)
+       ▼
+Buka ChordInspectionModal (Piano Roll & Fretboard) dengan layar bersih tanpa terhalang keyboard!
+```
 
-#### B. Pemetaan Enharmonik Nada Standar (Mayor vs Minor)
-| Posisi Kolom | Baris 1 (Mayor / Minor) | Baris 2 (Mayor / Minor) | Baris 3 (Mayor / Minor) |
-| :--- | :--- | :--- | :--- |
-| **Kolom 1** | `C`  / `Cm` | `E`  / `Em` | `Ab` / `G#m` *(standar 5 kres)* |
-| **Kolom 2** | `G`  / `Gm` | `B`  / `Bm` | `Eb` / `Ebm` |
-| **Kolom 3** | `D`  / `Dm` | `F#` / `F#m` | `Bb` / `Bbm` |
-| **Kolom 4** | `A`  / `Am` | `Db` / `C#m` *(sesuai request)* | `F`  / `Fm` |
+#### B. Alur Interaksi Drawer "+ Akor"
+```
+Header Key: [D] ────► Toolbar: [ + Bagian ▾ ]  [ + Akor ▾ ]
+                                                   │ (klik)
+                                                   ▼
+┌───────────────────────────────────────────────────────────────┐
+│ Drawer Sisipkan Akor (Key: D)                             [X] │
+├───────────────────────────────────────────────────────────────┤
+│ 🔍 Cari akor (misal: Bm7, G/B, F#)...                         │
+├───────────────────────────────────────────────────────────────┤
+│ FAMILY CHORD UTAMA (DIATONIK)                                 │
+│ ┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐ │
+│ │  I      │  ii     │  iii    │  IV     │  V      │  vi     │ │
+│ │  [D] 🔊 │ [Em] 🔊 │ [F#m]🔊 │  [G] 🔊 │  [A] 🔊 │ [Bm] 🔊 │ │
+│ └─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘ │
+│                                                               │
+│ VARIASI & EKSTENSI POPULER                                    │
+│ [Dmaj7] [Dadd9] [Dsus2] [Dsus4] [D/F#] [A7] [Em7] [A/C#]      │
+│                                                               │
+│ KAMUS LENGKAP SEMUA ROOT (Kromatik)                           │
+│ C · C# · D · Eb · E · F · F# · G · Ab · A · Bb · B            │
+└───────────────────────────────────────────────────────────────┘
+```
 
-#### C. Estetika & Desain Sesuai Tema FALS
-- **Latar Modal**: `#FFFFFF` bersih dengan border tipis `#E5E4DE`, rounded sudut `rounded-2xl`, dan bayangan `shadow-2xl`.
-- **Tombol Aktif (Selected Key)**: `#1C1917` (charcoal gelap) dengan teks putih `#FFFFFF` kontras tinggi.
-- **Tombol Normal**: `#FAF9F5` (off-white hangat) dengan border `#E5E4DE`, teks `#1C1917`, dan efek hover/active `#F5F4EE`.
-- **Segmented Control Mayor/Minor**: Kontainer kapsul halus dengan tombol aktif berwarna `#1C1917` (atau charcoal tint) dan tombol nonaktif berteks abu-abu hangat `#78716C`.
-- **Ukuran Sentuhan**: Minimal 42px tinggi per kotak nada pada grid sehingga sangat nyaman dioperasikan oleh jempol di smartphone.
+#### C. Estetika & Ergonomi
+- Menggunakan gaya Drawer Bank Bar (`bg-[#FAF9F5] border-[#E5E4DE] shadow-2xl`, dengan mobile grab handle `w-10 h-1 bg-[#D6D3D1]`).
+- Tiap kartu akor memiliki tombol preview suara kecil (`Volume2`), label derajat angka romawi (I, ii, iii, IV, V, vi), dan font monospace yang bersih.
+- Menekan salah satu akor langsung menyisipkannya ke teks editor lirik pada posisi kursor (`[D] `) dan menutup drawer.
 
 ---
 
 ### 3. Key Product Decisions & Trade-Offs
 
-- **Circle of Fifths vs Urutan Alfabet Kromatik**:
-  - *Keputusan*: Circle of Fifths 4x3 (C, G, D, A, dst.).
-  - *Alasan*: Pola ini merupakan standar industri workstation musik (DAW) dan mempermudah musisi melihat nada-nada yang bertetangga secara harmonik.
-- **Otomatis Tutup vs Konfirmasi Tombol OK Terpisah pada Grid**:
-  - *Keputusan*: 1 kali klik pada tombol grid langsung mengaplikasikan nada dan menutup popup. Tombol OK hanya berlaku untuk input teks manual.
-  - *Alasan*: Mengurangi jumlah ketukan jari (*friction reduction*) dari 2 tap menjadi 1 tap.
-- **Deteksi Otomatis Mode Mayor/Minor**:
-  - Saat modal dibuka dengan lagu yang sudah bernada `Am` atau `C#m`, modal secara otomatis membuka tab **Minor** dan menyorot tombol `Am` / `C#m`. Jika lagunya `C` atau `G`, modal otomatis membuka tab **Mayor**.
+1. **Family Chord Otomatis Sesuai Key**:
+   - Jika pengguna memilih Key `D`, maka famili chord-nya adalah `D`, `Em`, `F#m`, `G`, `A`, `Bm`, `C#dim`.
+   - Jika pengguna memilih Key `Am`, famili chord-nya adalah `Am`, `Bdim`, `C`, `Dm`, `Em`/`E7`, `F`, `G`.
+   - Tidak ada lagi akor acak yang salah tangga nada (seperti Dm saat key D mayor).
+2. **Drawer Bottom Sheet vs Inline Bar**:
+   - Inline bar sebelumnya memakan ruang horizontal dan hanya muat 4-5 akor root.
+   - Dengan 1 tombol `+ Akor` yang membuka Drawer, toolbar menjadi sangat bersih, dan pengguna mendapatkan pilihan harmoni yang jauh lebih kaya (I-vi, variasi 7th, sus, add9, serta pencarian).
+3. **Pencegahan Keyboard pada Klik Badge**:
+   - Menangani `pointerdown` alih-alih `click` biasa adalah kunci teknis utama untuk mencegah OS mobile memunculkan virtual keyboard sebelum modal sempat dibuka.
 
 ---
 
 ### 4. Technical Architecture & Data Strategy
 
-#### Diagram Komponen & Aliran Data
-
-```
-┌────────────────────────────────────────────────────────┐
-│ LyricEditor.tsx (State: songKey)                       │
-│                                                        │
-│  [ Header Desktop / Mobile ]                           │
-│  Trigger: <button onClick={() => setOpen(true)}>       │
-│           Key: [C] ▾                                   │
-│  </button>                                             │
-└──────────────────────────┬─────────────────────────────┘
-                           │ (isOpen, songKey, onSelectKey)
-                           ▼
-┌────────────────────────────────────────────────────────┐
-│ KeySelectorModal.tsx                                   │
-│                                                        │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │ Header: "PILIH NADA DASAR"   [ Mayor | Minor ]   │  │
-│  └──────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │ Input: [Ketik key lain...        ] [ OK ]        │  │
-│  └──────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │ Grid 4x3 (Circle of Fifths):                     │  │
-│  │  [ C  ]  [ G  ]  [ D  ]  [ A  ]                  │  │
-│  │  [ E  ]  [ B  ]  [ F# ]  [ Db/C#m ]              │  │
-│  │  [ Ab/G#m ] [ Eb ] [ Bb ] [ F  ]                 │  │
-│  └──────────────────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────┘
-```
-
-#### Struktur & Logika File yang Akan Dibuat/Dimodifikasi:
-1. **`/src/components/lyrics/KeySelectorModal.tsx`** *(Baru)*:
-   - Komponen modal popover yang berisi logika pemetaan Circle of Fifths untuk Mayor dan Minor.
-   - Deteksi mode awal berdasarkan akhiran `m` atau nama nada.
-   - Penanganan input teks kustom dengan tombol OK dan tombol `Enter`.
-   - Backdrop click outside & tombol Escape untuk menutup.
-2. **`/src/components/LyricEditor.tsx`**:
-   - Mengganti elemen `<select>` native pada Desktop Header dan Mobile Header dengan tombol pemicu `KeySelectorModal`.
-   - Mengirimkan `songKey` aktif dan callback `handleKeyChange` ke `KeySelectorModal`.
-3. **Verifikasi**:
-   - Memastikan transisi dari `Db` di mayor ke `C#m` di minor konsisten.
-   - Menjalankan `compile_applet` dan `lint_applet`.
+#### Komponen yang Dibuat / Dimodifikasi:
+1. **`/src/utils/musicTheory.ts` (atau `/src/utils/musicCalculations.ts`)**:
+   - Fungsi `getFamilyChordGroups(key: string)`: menghitung akor tingkat I-vii, akor variasi (7, sus2, sus4, add9, slash), serta interval audio untuk sound playback.
+2. **`/src/components/lyrics/ChordDrawerModal.tsx`** *(Baru)*:
+   - Komponen Drawer Bottom Sheet (mobile) & Modal (desktop).
+   - Menampilkan Family Chord tingkat I-vi, variasi, pencarian akor cepat, dan audio playback.
+3. **`/src/components/LyricEditor.tsx`**:
+   - Menambahkan event listener `handleDOMEvents: { pointerdown: ... }` di TipTap editor props untuk mencegah keyboard muncul saat klik badge chord.
+   - Mengelola state `isChordDrawerOpen` dan menghubungkannya dengan `LyricWritingToolbar`.
+4. **`/src/components/lyrics/LyricWritingToolbar.tsx`**:
+   - Menyederhanakan strip toolbar: Tombol `+ Bagian` dan tombol `+ Akor` (membuka ChordDrawerModal).
+   - Menghapus deretan akor horizontal statis yang panjang sehingga ruang toolbar sangat ringkas dan lega.

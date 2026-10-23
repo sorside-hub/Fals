@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
@@ -9,6 +9,7 @@ import { ChordBadgeNode } from './lyrics/ChordBadgeExtension';
 import { SectionExtension } from './lyrics/SectionExtension';
 import { ChordInspectionModal } from './lyrics/ChordInspectionModal';
 import { KeySelectorModal } from './lyrics/KeySelectorModal';
+import { ChordDrawerModal } from './lyrics/ChordDrawerModal';
 import {
   Sparkles,
   ArrowLeft,
@@ -47,6 +48,17 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const [songStatus, setSongStatus] = useState<'draft' | 'proses' | 'release'>(currentSong.status || 'draft');
   const [selectedChordForInspection, setSelectedChordForInspection] = useState<string | null>(null);
   const [isKeySelectorOpen, setIsKeySelectorOpen] = useState(false);
+  const [isChordDrawerOpen, setIsChordDrawerOpen] = useState(false);
+
+  // Gesture state refs to distinguish tap from touch scroll/drag
+  const pointerStateRef = useRef<{
+    startX: number;
+    startY: number;
+    chord: string | null;
+    isMoved: boolean;
+  } | null>(null);
+
+  const lastDragTimeRef = useRef<number>(0);
 
   // Initialize TipTap Editor with ChordBadge Extension
   const editor = useEditor({
@@ -66,12 +78,75 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       attributes: {
         class: 'tiptap-editor focus:outline-hidden min-h-[500px] text-[16px] sm:text-[17px] text-[#1C1917] leading-[2.25rem] font-normal px-1 sm:px-2',
       },
+      handleDOMEvents: {
+        pointerdown: (_view, event) => {
+          const target = event.target as HTMLElement | null;
+          const badge = target?.closest('.chord-badge, [data-chord]') as HTMLElement | null;
+          if (badge) {
+            const chord = badge.getAttribute('data-chord') || badge.textContent?.replace(/[\[\]]/g, '').trim();
+            if (chord) {
+              const e = event as PointerEvent;
+              pointerStateRef.current = {
+                startX: e.clientX,
+                startY: e.clientY,
+                chord,
+                isMoved: false,
+              };
+            }
+          } else {
+            pointerStateRef.current = null;
+          }
+          return false;
+        },
+        pointermove: (_view, event) => {
+          if (pointerStateRef.current) {
+            const e = event as PointerEvent;
+            const dx = Math.abs(e.clientX - pointerStateRef.current.startX);
+            const dy = Math.abs(e.clientY - pointerStateRef.current.startY);
+            if (dx > 8 || dy > 8) {
+              pointerStateRef.current.isMoved = true;
+              lastDragTimeRef.current = Date.now();
+            }
+          }
+          return false;
+        },
+        pointerup: (_view, event) => {
+          if (pointerStateRef.current) {
+            const { isMoved, chord } = pointerStateRef.current;
+            pointerStateRef.current = null;
+
+            if (isMoved) {
+              lastDragTimeRef.current = Date.now();
+            } else if (chord) {
+              // Genuine tap on chord badge (no drag detected)
+              event.preventDefault();
+              event.stopPropagation();
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
+              setSelectedChordForInspection(chord);
+              return true;
+            }
+          }
+          return false;
+        },
+        pointercancel: () => {
+          pointerStateRef.current = null;
+          return false;
+        },
+      },
       handleClick: (_view, _pos, event) => {
+        if (Date.now() - lastDragTimeRef.current < 300) {
+          return true; // Ignore clicks resulting from a drag/scroll gesture
+        }
         const target = event.target as HTMLElement | null;
         const badge = target?.closest('.chord-badge, [data-chord]') as HTMLElement | null;
         if (badge) {
           const chord = badge.getAttribute('data-chord') || badge.textContent?.replace(/[\[\]]/g, '').trim();
           if (chord) {
+            if (document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
             setSelectedChordForInspection(chord);
             return true;
           }
@@ -257,11 +332,17 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
   // Fallback click listener on editor container for chord badges
   const handleEditorContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (Date.now() - lastDragTimeRef.current < 300) {
+      return;
+    }
     const target = e.target as HTMLElement | null;
     const badge = target?.closest('.chord-badge, [data-chord]') as HTMLElement | null;
     if (badge) {
       const chord = badge.getAttribute('data-chord') || badge.textContent?.replace(/[\[\]]/g, '').trim();
       if (chord) {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
         setSelectedChordForInspection(chord);
       }
     }
@@ -401,6 +482,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         editorText={editor?.getText() || ''}
         onInsertSection={handleInsertSection}
         onInsertChord={handleInsertChord}
+        onOpenChordDrawer={() => setIsChordDrawerOpen(true)}
         onDismissKeyboard={handleDismissKeyboard}
       />
 
@@ -452,6 +534,14 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         onClose={() => setIsKeySelectorOpen(false)}
         currentKey={songKey}
         onSelectKey={handleKeyChange}
+      />
+
+      {/* 6. Interactive Chord Drawer Modal (Family Chords & Extensions) */}
+      <ChordDrawerModal
+        isOpen={isChordDrawerOpen}
+        onClose={() => setIsChordDrawerOpen(false)}
+        activeKey={songKey}
+        onInsertChord={handleInsertChord}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 {
-  "summary":  "Rencana implementasi popup pemilih nada dasar (Key Selector) interaktif menggantikan dropdown bawaan, dilengkapi tab Mayor/Minor, penulisan enharmonik standar (seperti C#m bukan Dbm), susunan grid Circle of Fifths 4x3, dan kolom ketik manual dengan gaya visual tema kertas hangat FALS.",
-  "updatedAt":  "2026-10-23T19:00:04.061035431Z",
+  "summary":  "Rencana implementasi: \n1. Mencegah keyboard virtual HP muncul saat klik/tap badge chord di editor lirik (menggunakan pointerdown interception + blur).\n2. Menyatukan tombol akor di toolbar menjadi 1 tombol tunggal '+ Akor' yang membuka Drawer Bottom Sheet (seperti Drawer Bank Bar).\n3. Menampilkan rekomendasi Family Chord lengkap sesuai nada dasar terpilih (tingkat I-vi), akor variasi populer (7, sus, add9, slash chord), serta kamus akor pencarian instan.",
+  "updatedAt":  "2026-10-23T19:54:43.560975696Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

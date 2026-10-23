@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Volume2, Check, Plus, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Volume2, Check, Plus, X, Music } from 'lucide-react';
 import { sound } from '../../utils/audioEngine';
 import { useVirtualKeyboard } from '../../hooks/useVirtualKeyboard';
 
@@ -75,6 +75,7 @@ export interface LyricWritingToolbarProps {
   onInsertSection: (sectionName: string) => void;
   onInsertChord: (chordName: string) => void;
   onPlayChord?: (key: string, intervals: number[]) => void;
+  onOpenChordDrawer?: () => void;
   onDismissKeyboard?: () => void;
   variant?: 'auto' | 'desktop' | 'mobile';
   keyboardOffset?: number;
@@ -87,6 +88,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
   onInsertSection,
   onInsertChord,
   onPlayChord,
+  onOpenChordDrawer,
   onDismissKeyboard,
   variant = 'auto',
   keyboardOffset: customKeyboardOffset,
@@ -247,46 +249,19 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
           </div>
         </div>
 
-        {/* Toggle Chord Inserter */}
-        <button
-          type="button"
-          onClick={() => setShowChordTrayDesktop((prev) => !prev)}
-          className="flex items-center gap-1 text-[11px] font-mono text-[#57534E] hover:text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#E5E4DE] cursor-pointer ml-auto shadow-2xs"
-        >
-          <span>Sisip Akor ({activeKey})</span>
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showChordTrayDesktop ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
-
-      {/* Collapsible Desktop Chord Tray */}
-      {showChordTrayDesktop && (
-        <div className="py-2 px-1 border-t border-[#E5E4DE] flex items-center gap-1.5 overflow-x-auto scrollbar-none text-xs bg-[#F5F4EE]/60">
-          <span className="text-[11px] font-mono text-[#78716C] shrink-0 mr-1">Klik sisip akor:</span>
-          {chords.map((c) => (
-            <button
-              key={c.name}
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                onInsertChord(c.name);
-                handlePlayChordSound(activeKey, c.intervals);
-              }}
-              className="px-2.5 py-1 rounded-md font-mono font-medium text-[11px] bg-[#FFFFFF] border border-[#D6D3D1] text-[#1C1917] hover:bg-[#FAF9F5] hover:border-[#1C1917] transition cursor-pointer flex items-center gap-1 shadow-2xs"
-            >
-              <span>[{c.name}]</span>
-            </button>
-          ))}
-
+        {/* Single Chord Drawer Button */}
+        {onOpenChordDrawer && (
           <button
             type="button"
-            onClick={() => handlePlayChordSound(activeKey, [0, 4, 7])}
-            className="p-1 rounded text-[#78716C] hover:text-[#1C1917] ml-auto cursor-pointer"
-            title="Dengarkan akor dasar"
+            onClick={onOpenChordDrawer}
+            className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none ml-auto"
+            title="Buka Drawer Harmoni & Family Chord"
           >
-            <Volume2 className="w-3.5 h-3.5" />
+            <Music className="w-3.5 h-3.5 text-[#57534E]" />
+            <span>+ Akor ({activeKey})</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 
@@ -296,87 +271,88 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
       style={{
         bottom: `${effectiveOffset}px`,
       }}
-      className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2 py-1.5 flex items-center gap-1.5 animate-fade-in"
+      className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2.5 py-1.5 flex items-center justify-between gap-2 animate-fade-in"
     >
-      {/* Pinned Single Section Dropdown Button (Outside scroll container to avoid clipping and keep keyboard open) */}
-      <div ref={mobileSectionRef} className="relative shrink-0">
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            setShowSectionDropdownMobile((prev) => !prev);
-          }}
-          className="flex items-center gap-1 text-[11px] font-mono font-bold text-[#1C1917] px-2.5 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5 text-[#57534E]" />
-          <span>Bagian</span>
-          <ChevronUp className={`w-3.5 h-3.5 text-[#78716C] transition-transform duration-200 ${showSectionDropdownMobile ? 'rotate-180' : ''}`} />
-        </button>
-
-        {/* Dropup Menu Mobile: Pops UPWARDS above bottom toolbar in a 2-column grid, drag-safe */}
-        {showSectionDropdownMobile && (
-          <div className="absolute left-0 bottom-full mb-2 w-[290px] max-w-[calc(100vw-24px)] bg-[#FFFFFF] border border-[#E5E4DE] rounded-xl shadow-2xl p-2 z-[100] animate-fade-in">
-            <div className="flex items-center justify-between px-1 pb-1.5 mb-1.5 border-b border-[#F0EFEA]">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#78716C] font-bold">
-                Sisip Bagian Lagu
-              </span>
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  setShowSectionDropdownMobile(false);
-                }}
-                className="w-5 h-5 flex items-center justify-center rounded text-[#78716C] hover:text-[#1C1917] hover:bg-[#F5F4EE] cursor-pointer"
-                title="Tutup Menu"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* 2-Column Grid: Displays all options at once without clipping or requiring scroll */}
-            <div className="grid grid-cols-2 gap-1.5 max-h-60 overflow-y-auto pr-0.5">
-              {sectionOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  tabIndex={-1}
-                  onPointerDown={handleItemPointerDown}
-                  onPointerMove={handleItemPointerMove}
-                  onPointerUp={() => handleItemPointerUp(opt.label)}
-                  onPointerCancel={handleItemPointerCancel}
-                  className="flex items-center justify-between px-2.5 py-2 text-xs font-mono font-medium text-[#1C1917] bg-[#FAF9F5] hover:bg-[#F0EFEA] active:bg-[#E7E5DC] border border-[#E5E4DE] rounded-lg transition text-left cursor-pointer select-none"
-                >
-                  <span className="font-semibold truncate">+{opt.label}</span>
-                  {opt.nextNumber && opt.nextNumber > 1 && (
-                    <span className="text-[9px] text-[#78716C] bg-[#FFFFFF] px-1 py-0.5 rounded border border-[#E5E4DE] shrink-0 ml-1">
-                      #{opt.nextNumber}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <span className="w-px h-5 bg-[#E5E4DE] mx-0.5 shrink-0" />
-
-      {/* Scrollable Action Chips for quick chords */}
-      <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
-        {chords.map((c) => (
+      <div className="flex items-center gap-1.5">
+        {/* Pinned Single Section Dropdown Button (Outside scroll container to avoid clipping and keep keyboard open) */}
+        <div ref={mobileSectionRef} className="relative shrink-0">
           <button
-            key={c.name}
             type="button"
             onPointerDown={(e) => {
               e.preventDefault();
-              onInsertChord(c.name);
-              handlePlayChordSound(activeKey, c.intervals);
+              setShowSectionDropdownMobile((prev) => !prev);
             }}
-            className="px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold bg-[#FFFFFF] border border-[#D6D3D1] text-[#1C1917] active:bg-[#EAE8DF] shrink-0 shadow-2xs"
+            className="flex items-center gap-1 text-[11px] font-mono font-bold text-[#1C1917] px-2.5 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
           >
-            [{c.name}]
+            <Plus className="w-3.5 h-3.5 text-[#57534E]" />
+            <span>Bagian</span>
+            <ChevronUp className={`w-3.5 h-3.5 text-[#78716C] transition-transform duration-200 ${showSectionDropdownMobile ? 'rotate-180' : ''}`} />
           </button>
-        ))}
+
+          {/* Dropup Menu Mobile: Pops UPWARDS above bottom toolbar in a 2-column grid, drag-safe */}
+          {showSectionDropdownMobile && (
+            <div className="absolute left-0 bottom-full mb-2 w-[290px] max-w-[calc(100vw-24px)] bg-[#FFFFFF] border border-[#E5E4DE] rounded-xl shadow-2xl p-2 z-[100] animate-fade-in">
+              <div className="flex items-center justify-between px-1 pb-1.5 mb-1.5 border-b border-[#F0EFEA]">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[#78716C] font-bold">
+                  Sisip Bagian Lagu
+                </span>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    setShowSectionDropdownMobile(false);
+                  }}
+                  className="w-5 h-5 flex items-center justify-center rounded text-[#78716C] hover:text-[#1C1917] hover:bg-[#F5F4EE] cursor-pointer"
+                  title="Tutup Menu"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* 2-Column Grid: Displays all options at once without clipping or requiring scroll */}
+              <div className="grid grid-cols-2 gap-1.5 max-h-60 overflow-y-auto pr-0.5">
+                {sectionOptions.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    tabIndex={-1}
+                    onPointerDown={handleItemPointerDown}
+                    onPointerMove={handleItemPointerMove}
+                    onPointerUp={() => handleItemPointerUp(opt.label)}
+                    onPointerCancel={handleItemPointerCancel}
+                    className="flex items-center justify-between px-2.5 py-2 text-xs font-mono font-medium text-[#1C1917] bg-[#FAF9F5] hover:bg-[#F0EFEA] active:bg-[#E7E5DC] border border-[#E5E4DE] rounded-lg transition text-left cursor-pointer select-none"
+                  >
+                    <span className="font-semibold truncate">+{opt.label}</span>
+                    {opt.nextNumber && opt.nextNumber > 1 && (
+                      <span className="text-[9px] text-[#78716C] bg-[#FFFFFF] px-1 py-0.5 rounded border border-[#E5E4DE] shrink-0 ml-1">
+                        #{opt.nextNumber}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <span className="w-px h-5 bg-[#E5E4DE] mx-0.5 shrink-0" />
+
+        {/* Single Chord Drawer Button for Mobile */}
+        {onOpenChordDrawer && (
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              setShowSectionDropdownMobile(false);
+              onOpenChordDrawer();
+            }}
+            className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#1C1917] px-2.5 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
+            title="Buka Drawer Akor"
+          >
+            <Music className="w-3.5 h-3.5 text-[#57534E]" />
+            <span>+ Akor ({activeKey})</span>
+          </button>
+        )}
       </div>
 
       {/* Dismiss Keyboard Button */}
