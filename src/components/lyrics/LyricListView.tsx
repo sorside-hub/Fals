@@ -22,6 +22,8 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
   const [newKey, setNewKey] = useState('C');
   const [newStatus, setNewStatus] = useState<'draft' | 'proses' | 'release'>('draft');
 
+  const [songToDelete, setSongToDelete] = useState<SongDraft | null>(null);
+
   const filteredSongs = songs.filter(song => {
     const matchStatus = statusFilter === 'all' || (song.status || 'draft') === statusFilter;
     const matchSearch =
@@ -162,7 +164,7 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeleteSong(song.id);
+                        setSongToDelete(song);
                       }}
                       className="p-1.5 rounded-lg text-[#A8A29E] hover:text-rose-600 hover:bg-[#FAF9F5] transition cursor-pointer shrink-0"
                       title="Hapus proyek lagu ini"
@@ -185,6 +187,44 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal: Konfirmasi Hapus Proyek */}
+      {songToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in cursor-pointer"
+          onClick={() => setSongToDelete(null)}
+        >
+          <div
+            className="w-full max-w-xs bg-[#FAF9F5] border border-[#E5E4DE] rounded-2xl shadow-xl p-5 space-y-3 animate-scale-up cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-bold text-[#1C1917]">Hapus Proyek Lagu?</h3>
+            <p className="text-xs text-[#78716C] leading-relaxed">
+              Lagu <span className="font-bold text-[#1C1917]">"{songToDelete.title || 'Tanpa Judul'}"</span> akan dihapus secara permanen.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E5E4DE]">
+              <button
+                type="button"
+                onClick={() => setSongToDelete(null)}
+                className="px-3.5 py-1.5 text-xs font-medium text-[#78716C] hover:text-[#1C1917] hover:bg-[#EAE8DF] rounded-lg transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteSong(songToDelete.id);
+                  setSongToDelete(null);
+                }}
+                className="px-3.5 py-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition cursor-pointer shadow-2xs"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

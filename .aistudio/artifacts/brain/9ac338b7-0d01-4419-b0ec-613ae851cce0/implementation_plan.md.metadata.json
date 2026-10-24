@@ -1,6 +1,6 @@
 {
-  "summary":  "Rencana penyederhanaan kartu list lirik dan logika navigasi tab lirik (editor retention & toggle back ke list).",
-  "updatedAt":  "2026-10-24T15:54:23.004743913Z",
+  "summary":  "Rencana kerja perbaikan estetika header (Key, BPM, Status), kontinuitas audio metronom saat modal ditutup, dan custom popover dropdown untuk Status lagu.",
+  "updatedAt":  "2026-10-24T18:15:10.782367487Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

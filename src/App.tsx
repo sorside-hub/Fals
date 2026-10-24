@@ -42,36 +42,52 @@ export default function App() {
   const [isBankBarPickerOpen, setIsBankBarPickerOpen] = useState(false);
   const [insertedBarText, setInsertedBarText] = useState<string | null>(null);
   const [lastActiveSongId, setLastActiveSongId] = useState<string | null>(currentSongId);
+  const [lastLyricSubView, setLastLyricSubView] = useState<'list' | 'editor'>('list');
 
-  // Sync current song from route ID if navigating directly via #lyrics/editor/:songId
+  // Track active subView and sync current song when navigating in lyrics tab
   useEffect(() => {
-    if (route.tab === 'lyrics' && route.subView === 'editor' && route.id) {
-      const targetSong = songs.find(s => s.id === route.id);
-      if (targetSong && targetSong.id !== currentSongId) {
-        selectSong(targetSong);
+    if (route.tab === 'lyrics') {
+      if (route.subView === 'editor') {
+        setLastLyricSubView('editor');
+        if (route.id) {
+          setLastActiveSongId(route.id);
+          const targetSong = songs.find(s => s.id === route.id);
+          if (targetSong && targetSong.id !== currentSongId) {
+            selectSong(targetSong);
+          }
+        }
+      } else {
+        setLastLyricSubView('list');
       }
-      setLastActiveSongId(route.id);
     }
   }, [route, songs, currentSongId, selectSong]);
 
   // Tab switching via hash router
   const handleSelectTab = (tab: TabType) => {
     if (tab === 'lyrics') {
-      // If currently ALREADY in lyrics editor: clicking lyrics tab toggles back to list view
-      if (route.tab === 'lyrics' && route.subView === 'editor') {
-        navigate('#lyrics');
-      } else if (route.tab !== 'lyrics') {
-        // If switching from another tab back to lyrics tab: return to active editor if present
-        const activeSongId = lastActiveSongId || currentSongId;
-        const exists = activeSongId && songs.some(s => s.id === activeSongId);
-        if (exists) {
-          navigate(`#lyrics/editor/${activeSongId}`);
+      if (route.tab === 'lyrics') {
+        // If currently ALREADY in lyrics tab and on editor: clicking lyrics tab toggles back to list view
+        if (route.subView === 'editor') {
+          setLastLyricSubView('list');
+          navigate('#lyrics');
         } else {
+          // Already on list view
           navigate('#lyrics');
         }
       } else {
-        // Already on list view
-        navigate('#lyrics');
+        // Switching from ANOTHER tab (learn/bank/tools) back to lyrics tab:
+        // Only return to editor if user was previously in editor before leaving lyrics tab
+        if (lastLyricSubView === 'editor') {
+          const activeSongId = lastActiveSongId || currentSongId;
+          const exists = activeSongId && songs.some(s => s.id === activeSongId);
+          if (exists) {
+            navigate(`#lyrics/editor/${activeSongId}`);
+          } else {
+            navigate('#lyrics');
+          }
+        } else {
+          navigate('#lyrics');
+        }
       }
     } else {
       navigate(`#${tab}`);
@@ -82,6 +98,7 @@ export default function App() {
   const handleSelectSongFromList = (song: SongDraft) => {
     selectSong(song);
     setLastActiveSongId(song.id);
+    setLastLyricSubView('editor');
     navigate(`#lyrics/editor/${song.id}`);
   };
 
@@ -90,6 +107,7 @@ export default function App() {
     if (created) {
       selectSong(created);
       setLastActiveSongId(created.id);
+      setLastLyricSubView('editor');
       navigate(`#lyrics/editor/${created.id}`);
     }
   };
@@ -97,6 +115,7 @@ export default function App() {
   // Send bar directly to active lyric editor
   const handleSendToLyric = (text: string) => {
     setInsertedBarText(text);
+    setLastLyricSubView('editor');
     navigate(`#lyrics/editor/${currentSong.id}`);
   };
 
