@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { X, Search, Volume2, Plus, Sparkles, Music } from 'lucide-react';
 import { getFamilyChordGroups } from '../../utils/familyChords';
 import { sound } from '../../utils/audioEngine';
@@ -20,6 +20,42 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'family' | 'variations' | 'dictionary'>('all');
   const [dictRoot, setDictRoot] = useState('C');
+
+  // Swipe-down drag-to-dismiss state
+  const [dragOffset, setDragOffset] = useState(0);
+  const isDraggingRef = useRef(false);
+  const startYRef = useRef(0);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    isDraggingRef.current = true;
+    startYRef.current = e.clientY;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const dy = e.clientY - startYRef.current;
+    if (dy > 0) {
+      setDragOffset(dy);
+    } else {
+      setDragOffset(0);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    if (dragOffset > 60) {
+      onClose();
+    }
+    setDragOffset(0);
+  };
+
+  const handlePointerCancel = () => {
+    isDraggingRef.current = false;
+    setDragOffset(0);
+  };
 
   // Compute family chords and variations based on active key
   const chordGroup = useMemo(() => {
@@ -74,9 +110,24 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
       <div className="fixed inset-0" onClick={onClose} />
 
       {/* Drawer Container */}
-      <div className="relative w-full sm:max-w-xl bg-[#FAF9F5] border-t sm:border border-[#E5E4DE] rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden z-10 select-none">
-        {/* Mobile grab handle */}
-        <div className="w-10 h-1 bg-[#D6D3D1] rounded-full mx-auto my-2.5 sm:hidden" />
+      <div
+        style={{
+          transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined,
+          transition: isDraggingRef.current ? 'none' : 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        className="relative w-full sm:max-w-xl bg-[#FAF9F5] border-t sm:border border-[#E5E4DE] rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden z-10 select-none"
+      >
+        {/* Mobile grab handle container with touch/pointer drag listener */}
+        <div
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          className="w-full py-2.5 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none sm:hidden"
+          title="Geser ke bawah untuk menutup"
+        >
+          <div className="w-12 h-1.5 bg-[#D6D3D1] rounded-full hover:bg-[#A8A29E] active:bg-[#78716C] transition-colors" />
+        </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#FFFFFF] border-b border-[#E5E4DE]">

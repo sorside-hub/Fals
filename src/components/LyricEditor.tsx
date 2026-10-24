@@ -3,15 +3,15 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
 import { CHROMATIC_NOTES } from '../utils/musicTheory';
-import { SongDraft } from '../types';
+import { SongDraft, BarItem } from '../types';
 import { LyricWritingToolbar } from './lyrics/LyricWritingToolbar';
 import { ChordBadgeNode } from './lyrics/ChordBadgeExtension';
 import { SectionExtension } from './lyrics/SectionExtension';
 import { ChordInspectionModal } from './lyrics/ChordInspectionModal';
 import { KeySelectorModal } from './lyrics/KeySelectorModal';
 import { ChordDrawerModal } from './lyrics/ChordDrawerModal';
+import { WordBankDrawerModal } from './lyrics/WordBankDrawerModal';
 import {
-  Sparkles,
   ArrowLeft,
   ChevronDown
 } from 'lucide-react';
@@ -20,7 +20,8 @@ interface LyricEditorProps {
   currentSong: SongDraft;
   onUpdateSong: (song: SongDraft) => void;
   onOpenSongManager?: () => void;
-  onOpenBarBankModal: () => void;
+  onOpenBarBankModal?: () => void;
+  barItems?: BarItem[];
   insertedBarText?: string | null;
   onClearInsertedBar?: () => void;
   onBack?: () => void;
@@ -38,6 +39,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   currentSong,
   onUpdateSong,
   onOpenBarBankModal,
+  barItems,
   insertedBarText,
   onClearInsertedBar,
   onBack
@@ -49,6 +51,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const [selectedChordForInspection, setSelectedChordForInspection] = useState<string | null>(null);
   const [isKeySelectorOpen, setIsKeySelectorOpen] = useState(false);
   const [isChordDrawerOpen, setIsChordDrawerOpen] = useState(false);
+  const [isWordBankOpen, setIsWordBankOpen] = useState(false);
 
   // Gesture state refs to distinguish tap from touch scroll/drag
   const pointerStateRef = useRef<{
@@ -76,7 +79,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     ),
     editorProps: {
       attributes: {
-        class: 'tiptap-editor focus:outline-hidden min-h-[500px] text-[16px] sm:text-[17px] text-[#1C1917] leading-[2.25rem] font-normal px-1 sm:px-2',
+        class: 'tiptap-editor focus:outline-hidden min-h-[400px] text-[14px] sm:text-[15.5px] text-[#1C1917] leading-[1.55rem] font-normal px-1 sm:px-2',
       },
       handleDOMEvents: {
         pointerdown: (_view, event) => {
@@ -223,7 +226,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       const syllables = isSectionTag ? 0 : countSyllablesInLine(line);
       return {
         id: index,
-        top: index * 36,
+        top: index * 24.8,
         syllables,
         isSectionTag,
       };
@@ -320,6 +323,12 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       .run();
   };
 
+  // Insert text from Word Bank at cursor position
+  const handleInsertWordBankText = (text: string) => {
+    if (!editor) return;
+    editor.chain().focus().insertContent(` ${text} `).run();
+  };
+
   // Dismiss keyboard explicitly
   const handleDismissKeyboard = () => {
     if (editor) {
@@ -351,7 +360,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   return (
     <div className="w-full flex flex-col bg-[#FAF9F5] min-h-[calc(100vh-140px)] animate-fade-in">
       {/* 1. Adaptive Header */}
-      {/* DESKTOP HEADER (1 Single Row: [←] + Title + Key + Status + Bank Bar) */}
+      {/* DESKTOP HEADER (1 Single Row: [←] + Title + Key + Status) */}
       <div className="hidden md:flex sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] py-2.5 items-center justify-between gap-3">
         {/* Left: Back button (icon only) & Big Inline Title */}
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -374,7 +383,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
           />
         </div>
 
-        {/* Right: Key, Status & Bank Bar */}
+        {/* Right: Key & Status */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Key selector trigger */}
           <button
@@ -403,22 +412,12 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
               <option value="release">Release</option>
             </select>
           </div>
-
-          {/* Bank Bar Shortcut */}
-          <button
-            onClick={onOpenBarBankModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#1C1917] bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs"
-            title="Buka Bank Bar untuk comot ide rima"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
-            <span>Bank Bar</span>
-          </button>
         </div>
       </div>
 
       {/* MOBILE HEADER (2 Rows: Row 1 = Controls, Row 2 = Full Title) */}
       <div className="md:hidden sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] pt-1.5 pb-2 px-3">
-        {/* Row 1: Key, Status, Bank Bar */}
+        {/* Row 1: Key & Status */}
         <div className="flex items-center justify-between gap-2 pb-1">
           <div className="flex items-center gap-1.5">
             {/* Key selector trigger */}
@@ -449,17 +448,6 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
               </select>
             </div>
           </div>
-
-          <div className="flex items-center gap-1.5">
-            {/* Bank Bar Shortcut Button */}
-            <button
-              onClick={onOpenBarBankModal}
-              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-[#1C1917] bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-md transition cursor-pointer shadow-2xs"
-            >
-              <Sparkles className="w-3 h-3 text-[#57534E]" />
-              <span>Bank Bar</span>
-            </button>
-          </div>
         </div>
 
         {/* Row 2: Big full-width Title Input */}
@@ -483,6 +471,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         onInsertSection={handleInsertSection}
         onInsertChord={handleInsertChord}
         onOpenChordDrawer={() => setIsChordDrawerOpen(true)}
+        onOpenWordBank={() => setIsWordBankOpen(true)}
         onDismissKeyboard={handleDismissKeyboard}
       />
 
@@ -497,7 +486,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
             <div
               key={item.id}
               style={{ transform: `translateY(${item.top}px)` }}
-              className="absolute left-0 top-0 w-full h-[2.25rem] flex items-center justify-center pointer-events-none"
+              className="absolute left-0 top-0 w-full h-[1.55rem] flex items-center justify-center pointer-events-none"
             >
               {item.isSectionTag ? (
                 <span className="text-[9px] font-mono font-bold text-[#78716C] tracking-tight leading-none">
@@ -543,6 +532,15 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         activeKey={songKey}
         onInsertChord={handleInsertChord}
       />
+
+      {/* 7. Interactive Word Bank Drawer Modal (Rhymes, Diction, Phrases, & Alliteration) */}
+      <WordBankDrawerModal
+        isOpen={isWordBankOpen}
+        onClose={() => setIsWordBankOpen(false)}
+        onInsertText={handleInsertWordBankText}
+        barItems={barItems}
+      />
     </div>
   );
 };
+

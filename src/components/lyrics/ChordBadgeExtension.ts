@@ -38,7 +38,7 @@ export const ChordBadgeNode = Node.create({
       'span',
       mergeAttributes(HTMLAttributes, {
         'data-chord': chord,
-        class: 'chord-badge inline-flex items-center px-1.5 py-0.5 my-0.5 mx-0.5 rounded font-mono font-bold text-[12px] sm:text-[13px] bg-[#1C1917] text-[#FAF9F5] shadow-2xs cursor-pointer select-none hover:bg-[#292524] active:scale-95 transition-all',
+        class: 'chord-badge inline-flex items-center px-1 py-0 my-0 mx-0.5 rounded font-mono font-bold text-[11px] sm:text-[12px] bg-[#1C1917] text-[#FAF9F5] shadow-2xs cursor-pointer select-none hover:bg-[#292524] active:scale-95 transition-all',
         title: `Akor ${chord} • Klik untuk diagram piano/fretboard & audio`,
       }),
       ['span', { class: 'chord-name tracking-tight pointer-events-none' }, chord],

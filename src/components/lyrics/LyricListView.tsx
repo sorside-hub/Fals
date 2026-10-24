@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SongDraft } from '../../types';
-import { Plus, Search, Music, Trash2, Calendar, FileText, CheckCircle2, Clock, Sparkles } from 'lucide-react';
+import { Plus, Search, Trash2, FileText } from 'lucide-react';
 
 interface LyricListViewProps {
   songs: SongDraft[];
@@ -49,23 +49,21 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
   const getStatusBadge = (status: 'draft' | 'proses' | 'release') => {
     if (status === 'release') {
       return (
-        <span className="flex items-center gap-1 text-[11px] font-mono font-semibold text-[#1C1917]">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Release</span>
+        <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+          RELEASE
         </span>
       );
     }
     if (status === 'proses') {
       return (
-        <span className="flex items-center gap-1 text-[11px] font-mono font-medium text-[#78716C]">
-          <Clock className="w-3.5 h-3.5 text-amber-600" />
-          <span className="text-[#44403C]">Proses</span>
+        <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider rounded-md bg-amber-50 text-amber-700 border border-amber-200/60">
+          PROSES
         </span>
       );
     }
     return (
-      <span className="flex items-center gap-1 text-[11px] font-mono text-[#A8A29E]">
-        <span>Draft</span>
+      <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider rounded-md bg-[#F5F4EE] text-[#78716C] border border-[#E5E4DE]">
+        DRAFT
       </span>
     );
   };
@@ -145,48 +143,20 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
             const updatedDate = new Date(song.updatedAt).toLocaleDateString('id-ID', {
               day: 'numeric',
               month: 'short',
-              hour: '2-digit',
-              minute: '2-digit'
-            });
+              year: 'numeric'
+            }).toUpperCase();
 
             return (
               <div
                 key={song.id}
                 onClick={() => onSelectSong(song)}
-                className="p-5 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-2xl transition-all cursor-pointer shadow-2xs group flex flex-col justify-between"
+                className="p-4 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-2xl transition-all cursor-pointer shadow-2xs group flex flex-col justify-between gap-3"
               >
-                <div>
-                  {/* Card Header: Title & Status */}
-                  <div className="flex items-start justify-between gap-3 pb-2 border-b border-[#F5F4EE]">
-                    <div>
-                      <h3 className="text-base font-bold text-[#1C1917] group-hover:underline">
-                        {song.title || 'Tanpa Judul'}
-                      </h3>
-                      <div className="flex items-center gap-2 text-[11px] text-[#78716C] mt-1 font-mono">
-                        <span>Nada {song.key}</span>
-                        <span aria-hidden="true">·</span>
-                        <span>{song.bpm} BPM</span>
-                        <span aria-hidden="true">·</span>
-                        <span>{updatedDate}</span>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 pt-0.5">
-                      {getStatusBadge(song.status || 'draft')}
-                    </div>
-                  </div>
-
-                  {/* Lyrical Excerpt */}
-                  <p className="text-xs text-[#57534E] leading-relaxed mt-3 italic line-clamp-3">
-                    "{getExcerpt(song.content)}"
-                  </p>
-                </div>
-
-                {/* Footer Action Strip */}
-                <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-[#F5F4EE] text-xs">
-                  <span className="text-[11px] font-semibold text-[#1C1917] group-hover:underline flex items-center gap-1">
-                    Buka di Editor TipTap →
-                  </span>
+                {/* Top Row: Title & Delete button */}
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-base font-bold text-[#1C1917] group-hover:underline line-clamp-1">
+                    {song.title || 'Tanpa Judul'}
+                  </h3>
 
                   {songs.length > 1 && (
                     <button
@@ -194,12 +164,23 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
                         e.stopPropagation();
                         onDeleteSong(song.id);
                       }}
-                      className="p-1.5 rounded-md text-[#A8A29E] hover:text-rose-600 hover:bg-[#FAF9F5] transition cursor-pointer"
+                      className="p-1.5 rounded-lg text-[#A8A29E] hover:text-rose-600 hover:bg-[#FAF9F5] transition cursor-pointer shrink-0"
                       title="Hapus proyek lagu ini"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
+                </div>
+
+                {/* Bottom Row: status • key • bpm • date */}
+                <div className="flex items-center flex-wrap gap-2 text-xs text-[#78716C]">
+                  {getStatusBadge(song.status || 'draft')}
+                  <span className="text-[#D6D3D1]" aria-hidden="true">•</span>
+                  <span className="font-medium text-[#44403C]">Key {song.key}</span>
+                  <span className="text-[#D6D3D1]" aria-hidden="true">•</span>
+                  <span className="font-medium text-[#44403C]">{song.bpm} BPM</span>
+                  <span className="text-[#D6D3D1]" aria-hidden="true">•</span>
+                  <span className="font-mono text-[11px] text-[#78716C]">{updatedDate}</span>
                 </div>
               </div>
             );

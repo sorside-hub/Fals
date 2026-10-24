@@ -1,6 +1,6 @@
 {
-  "summary":  "Rencana implementasi: \n1. Mencegah keyboard virtual HP muncul saat klik/tap badge chord di editor lirik (menggunakan pointerdown interception + blur).\n2. Menyatukan tombol akor di toolbar menjadi 1 tombol tunggal '+ Akor' yang membuka Drawer Bottom Sheet (seperti Drawer Bank Bar).\n3. Menampilkan rekomendasi Family Chord lengkap sesuai nada dasar terpilih (tingkat I-vi), akor variasi populer (7, sus, add9, slash chord), serta kamus akor pencarian instan.",
-  "updatedAt":  "2026-10-23T19:54:43.560975696Z",
+  "summary":  "Rencana penyederhanaan kartu list lirik dan logika navigasi tab lirik (editor retention & toggle back ke list).",
+  "updatedAt":  "2026-10-24T15:54:23.004743913Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

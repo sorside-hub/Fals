@@ -31,28 +31,28 @@
 
 .tiptap-editor p {
   margin: 0;
-  line-height: 2.25rem;
-  min-height: 2.25rem;
+  line-height: 1.55rem;
+  min-height: 1.55rem;
 }
 
 .tiptap-editor h2 {
-  font-size: 1.125rem;
+  font-size: 1.05rem;
   font-weight: 700;
   margin: 0;
-  line-height: 2.25rem;
-  min-height: 2.25rem;
+  line-height: 1.55rem;
+  min-height: 1.55rem;
   color: #1C1917;
 }
 
 .tiptap-editor h3 {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #78716C;
   margin: 0;
-  line-height: 2.25rem;
-  min-height: 2.25rem;
+  line-height: 1.55rem;
+  min-height: 1.55rem;
 }
 
 .tiptap-editor blockquote {
@@ -60,7 +60,7 @@
   padding-left: 0.75rem;
   color: #57534E;
   font-style: italic;
-  line-height: 2.25rem;
+  line-height: 1.55rem;
 }
 
 /* Scrollbar configuration */
@@ -100,15 +100,15 @@
 .chord-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.1rem 0.375rem;
-  margin: 0.1rem 0.2rem;
-  border-radius: 0.25rem;
+  padding: 0.05rem 0.25rem;
+  margin: 0 0.125rem;
+  border-radius: 0.2rem;
   background-color: #1C1917;
   color: #FAF9F5;
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 0.725rem;
   font-weight: 700;
-  line-height: 1.25rem;
+  line-height: 1rem;
   cursor: pointer;
   user-select: none;
   vertical-align: middle;

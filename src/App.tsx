@@ -41,6 +41,7 @@ export default function App() {
   // Modal and insertion states
   const [isBankBarPickerOpen, setIsBankBarPickerOpen] = useState(false);
   const [insertedBarText, setInsertedBarText] = useState<string | null>(null);
+  const [lastActiveSongId, setLastActiveSongId] = useState<string | null>(currentSongId);
 
   // Sync current song from route ID if navigating directly via #lyrics/editor/:songId
   useEffect(() => {
@@ -49,17 +50,38 @@ export default function App() {
       if (targetSong && targetSong.id !== currentSongId) {
         selectSong(targetSong);
       }
+      setLastActiveSongId(route.id);
     }
   }, [route, songs, currentSongId, selectSong]);
 
   // Tab switching via hash router
   const handleSelectTab = (tab: TabType) => {
-    navigate(`#${tab}`);
+    if (tab === 'lyrics') {
+      // If currently ALREADY in lyrics editor: clicking lyrics tab toggles back to list view
+      if (route.tab === 'lyrics' && route.subView === 'editor') {
+        navigate('#lyrics');
+      } else if (route.tab !== 'lyrics') {
+        // If switching from another tab back to lyrics tab: return to active editor if present
+        const activeSongId = lastActiveSongId || currentSongId;
+        const exists = activeSongId && songs.some(s => s.id === activeSongId);
+        if (exists) {
+          navigate(`#lyrics/editor/${activeSongId}`);
+        } else {
+          navigate('#lyrics');
+        }
+      } else {
+        // Already on list view
+        navigate('#lyrics');
+      }
+    } else {
+      navigate(`#${tab}`);
+    }
   };
 
   // Lyric navigation
   const handleSelectSongFromList = (song: SongDraft) => {
     selectSong(song);
+    setLastActiveSongId(song.id);
     navigate(`#lyrics/editor/${song.id}`);
   };
 
@@ -67,6 +89,7 @@ export default function App() {
     const created = createSong(title, key, status || 'draft');
     if (created) {
       selectSong(created);
+      setLastActiveSongId(created.id);
       navigate(`#lyrics/editor/${created.id}`);
     }
   };
@@ -119,6 +142,7 @@ export default function App() {
               <LyricEditor
                 currentSong={currentSong}
                 onUpdateSong={updateSong}
+                barItems={barItems}
                 onOpenBarBankModal={() => setIsBankBarPickerOpen(true)}
                 insertedBarText={insertedBarText}
                 onClearInsertedBar={() => setInsertedBarText(null)}

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Volume2, Check, Plus, X, Music } from 'lucide-react';
+import { ChevronDown, ChevronUp, Volume2, Check, Plus, X, Music, Sparkles } from 'lucide-react';
 import { sound } from '../../utils/audioEngine';
 import { useVirtualKeyboard } from '../../hooks/useVirtualKeyboard';
 
@@ -76,6 +76,7 @@ export interface LyricWritingToolbarProps {
   onInsertChord: (chordName: string) => void;
   onPlayChord?: (key: string, intervals: number[]) => void;
   onOpenChordDrawer?: () => void;
+  onOpenWordBank?: () => void;
   onDismissKeyboard?: () => void;
   variant?: 'auto' | 'desktop' | 'mobile';
   keyboardOffset?: number;
@@ -89,6 +90,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
   onInsertChord,
   onPlayChord,
   onOpenChordDrawer,
+  onOpenWordBank,
   onDismissKeyboard,
   variant = 'auto',
   keyboardOffset: customKeyboardOffset,
@@ -249,18 +251,40 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
           </div>
         </div>
 
-        {/* Single Chord Drawer Button */}
-        {onOpenChordDrawer && (
-          <button
-            type="button"
-            onClick={onOpenChordDrawer}
-            className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none ml-auto"
-            title="Buka Drawer Harmoni & Family Chord"
-          >
-            <Music className="w-3.5 h-3.5 text-[#57534E]" />
-            <span>+ Akor ({activeKey})</span>
-          </button>
-        )}
+        {/* Single Chord Drawer & Word Bank Buttons */}
+        <div className="flex items-center gap-1.5 ml-auto">
+          {onOpenChordDrawer && (
+            <button
+              type="button"
+              onClick={() => {
+                onDismissKeyboard?.();
+                (document.activeElement as HTMLElement)?.blur?.();
+                onOpenChordDrawer();
+              }}
+              className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none"
+              title="Buka Drawer Harmoni & Family Chord"
+            >
+              <Music className="w-3.5 h-3.5 text-[#57534E]" />
+              <span>+ Akor ({activeKey})</span>
+            </button>
+          )}
+
+          {onOpenWordBank && (
+            <button
+              type="button"
+              onClick={() => {
+                onDismissKeyboard?.();
+                (document.activeElement as HTMLElement)?.blur?.();
+                onOpenWordBank();
+              }}
+              className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none"
+              title="Buka Word Bank (Bank Kata & Rima)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
+              <span>+ Bank Kata</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -282,7 +306,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
               e.preventDefault();
               setShowSectionDropdownMobile((prev) => !prev);
             }}
-            className="flex items-center gap-1 text-[11px] font-mono font-bold text-[#1C1917] px-2.5 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
+            className="flex items-center gap-1 text-[11px] font-mono font-bold text-[#1C1917] px-2 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 text-[#57534E]" />
             <span>Bagian</span>
@@ -341,35 +365,44 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
         {onOpenChordDrawer && (
           <button
             type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
+            onClick={(e) => {
+              e.stopPropagation();
               setShowSectionDropdownMobile(false);
+              onDismissKeyboard?.();
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
               onOpenChordDrawer();
             }}
-            className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#1C1917] px-2.5 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
+            className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#1C1917] px-2 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
             title="Buka Drawer Akor"
           >
             <Music className="w-3.5 h-3.5 text-[#57534E]" />
             <span>+ Akor ({activeKey})</span>
           </button>
         )}
-      </div>
 
-      {/* Dismiss Keyboard Button */}
-      {onDismissKeyboard && (
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            setShowSectionDropdownMobile(false);
-            onDismissKeyboard();
-          }}
-          className="w-8 h-8 shrink-0 flex items-center justify-center rounded-md bg-[#F5F4EE] hover:bg-[#EAE8DF] text-[#1C1917] active:scale-95 border border-[#E5E4DE] cursor-pointer"
-          title="Tutup Keyboard"
-        >
-          <Check className="w-4 h-4 text-[#1C1917]" />
-        </button>
-      )}
+        {/* Word Bank Drawer Button for Mobile */}
+        {onOpenWordBank && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowSectionDropdownMobile(false);
+              onDismissKeyboard?.();
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
+              onOpenWordBank();
+            }}
+            className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#1C1917] px-2 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
+            title="Buka Word Bank"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
+            <span>+ Bank Kata</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 
