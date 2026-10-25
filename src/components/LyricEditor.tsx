@@ -13,9 +13,11 @@ import { ChordDrawerModal } from './lyrics/ChordDrawerModal';
 import { WordBankDrawerModal } from './lyrics/WordBankDrawerModal';
 import { BpmMetronomeModal } from './lyrics/BpmMetronomeModal';
 import { StatusPopover } from './lyrics/StatusPopover';
+import { SongProjectDrawer } from './lyrics/SongProjectDrawer';
 import {
   ArrowLeft,
-  ChevronDown
+  ChevronDown,
+  Menu,
 } from 'lucide-react';
 
 interface LyricEditorProps {
@@ -23,6 +25,15 @@ interface LyricEditorProps {
   onUpdateSong: (song: SongDraft) => void;
   onOpenSongManager?: () => void;
   onOpenBarBankModal?: () => void;
+  onOpenConceptEditor?: () => void;
+  onAddVersion?: (duplicateFromActive: boolean) => void;
+  onSetFinalVersion?: (versionId: string) => void;
+  onSwitchVersion?: (versionId: string) => void;
+  onRenameVersion?: (versionId: string, newName: string) => void;
+  onDeleteVersion?: (versionId: string) => void;
+  onAddAudioMemo?: (name: string, duration: number, blob: Blob) => void;
+  onRenameAudioMemo?: (memoId: string, newName: string) => void;
+  onDeleteAudioMemo?: (memoId: string) => void;
   barItems?: BarItem[];
   insertedBarText?: string | null;
   onClearInsertedBar?: () => void;
@@ -41,6 +52,15 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   currentSong,
   onUpdateSong,
   onOpenBarBankModal,
+  onOpenConceptEditor,
+  onAddVersion,
+  onSetFinalVersion,
+  onSwitchVersion,
+  onRenameVersion,
+  onDeleteVersion,
+  onAddAudioMemo,
+  onRenameAudioMemo,
+  onDeleteAudioMemo,
   barItems,
   insertedBarText,
   onClearInsertedBar,
@@ -55,6 +75,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const [isBpmModalOpen, setIsBpmModalOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isMobileStatusOpen, setIsMobileStatusOpen] = useState(false);
+  const [isProjectDrawerOpen, setIsProjectDrawerOpen] = useState(false);
   const [isChordDrawerOpen, setIsChordDrawerOpen] = useState(false);
   const [isWordBankOpen, setIsWordBankOpen] = useState(false);
 
@@ -164,16 +185,30 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
+      const updatedVersions = (currentSong.versions || []).map(v =>
+        v.id === currentSong.activeVersionId ? { ...v, content: html } : v
+      );
       onUpdateSong({
         ...currentSong,
         title: songTitle,
         key: songKey,
         bpm: songBpm,
         content: html,
+        versions: updatedVersions.length > 0 ? updatedVersions : currentSong.versions,
         updatedAt: Date.now(),
       });
     },
   });
+
+  // Sync TipTap editor content when active version changes
+  useEffect(() => {
+    if (editor && currentSong.content !== undefined) {
+      const formatted = formatChordsForEditor(currentSong.content);
+      if (editor.getHTML() !== formatted) {
+        editor.commands.setContent(formatted, { emitUpdate: false });
+      }
+    }
+  }, [currentSong.activeVersionId, currentSong.content, editor]);
 
   // Handle incoming inserted bar from Bank Bar
   useEffect(() => {
@@ -446,6 +481,16 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
               onSelectStatus={handleStatusChange}
             />
           </div>
+
+          {/* Right Sidebar Drawer Trigger (Menu Icon Garis 3) */}
+          <button
+            type="button"
+            onClick={() => setIsProjectDrawerOpen(true)}
+            className="w-8 h-8 flex items-center justify-center bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs text-[#1C1917]"
+            title="Buka Sidebar Hub Proyek"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -502,6 +547,16 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
               />
             </div>
           </div>
+
+          {/* Right Sidebar Drawer Trigger Mobile (Menu Icon Garis 3) */}
+          <button
+            type="button"
+            onClick={() => setIsProjectDrawerOpen(true)}
+            className="w-7.5 h-7.5 flex items-center justify-center bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs text-[#1C1917]"
+            title="Buka Sidebar Hub Proyek"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Row 2: Big full-width Title Input */}
@@ -585,6 +640,22 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         onClose={() => setIsBpmModalOpen(false)}
         bpm={songBpm}
         onChangeBpm={handleBpmChange}
+      />
+
+      {/* 5.6. Right Sidebar Hub Proyek Lagu Drawer */}
+      <SongProjectDrawer
+        isOpen={isProjectDrawerOpen}
+        onClose={() => setIsProjectDrawerOpen(false)}
+        song={currentSong}
+        onOpenConceptEditor={onOpenConceptEditor || (() => {})}
+        onAddVersion={onAddVersion || (() => {})}
+        onSetFinalVersion={onSetFinalVersion || (() => {})}
+        onSwitchVersion={onSwitchVersion || (() => {})}
+        onRenameVersion={onRenameVersion || (() => {})}
+        onDeleteVersion={onDeleteVersion || (() => {})}
+        onAddAudioMemo={onAddAudioMemo}
+        onRenameAudioMemo={onRenameAudioMemo}
+        onDeleteAudioMemo={onDeleteAudioMemo}
       />
 
       {/* 6. Interactive Chord Drawer Modal (Family Chords & Extensions) */}

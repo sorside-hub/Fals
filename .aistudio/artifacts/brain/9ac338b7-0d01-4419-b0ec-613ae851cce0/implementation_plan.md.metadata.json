@@ -1,6 +1,6 @@
 {
-  "summary":  "Rencana kerja perbaikan estetika header (Key, BPM, Status), kontinuitas audio metronom saat modal ditutup, dan custom popover dropdown untuk Status lagu.",
-  "updatedAt":  "2026-10-24T18:15:10.782367487Z",
+  "summary":  "Dokumen rencana kerja Tahap 2 untuk Sistem Versi Lirik (Multi-Version Lyric Drafting System), penandaan Versi Final, switching versi instan di sidebar, dan migrasi otomatis.",
+  "updatedAt":  "2026-10-25T08:19:24.887582820Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

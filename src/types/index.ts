@@ -100,10 +100,29 @@ export interface TheoryLesson {
   progressionExample?: string[];
 }
 
+export interface LyricVersion {
+  id: string;
+  name: string;
+  content: string;
+  isFinal: boolean;
+  createdAt: number;
+}
+
+export interface AudioMemo {
+  id: string;
+  name: string;
+  duration: number; // in seconds
+  createdAt: number;
+}
+
 export interface SongDraft {
   id: string;
   title: string;
   content: string;
+  concept?: string;
+  versions?: LyricVersion[];
+  activeVersionId?: string;
+  audioMemos?: AudioMemo[];
   key: string;
   bpm: number;
   timeSignature: string;

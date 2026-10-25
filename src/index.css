@@ -29,6 +29,18 @@
   outline: none;
 }
 
+/* TipTap Placeholder Styling */
+.tiptap p.is-editor-empty:first-child::before,
+.tiptap-editor p.is-editor-empty:first-child::before,
+.tiptap p.is-empty::before,
+.tiptap-editor p.is-empty::before {
+  color: #A8A29E;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 .tiptap-editor p {
   margin: 0;
   line-height: 1.55rem;

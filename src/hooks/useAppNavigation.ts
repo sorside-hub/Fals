@@ -4,7 +4,7 @@ import { TabType } from '../types';
 export interface ParsedRoute {
   rawHash: string;
   tab: TabType;
-  subView?: 'editor' | 'deep' | null;
+  subView?: 'editor' | 'deep' | 'concept' | null;
   id?: string | null;
 }
 
@@ -23,7 +23,7 @@ export function parseHash(hashStr: string): ParsedRoute {
   else if (rawTab === 'tools' || rawTab === 'alat') tab = 'tools';
   else tab = 'learn';
 
-  const subView = (parts[1] === 'editor' || parts[1] === 'deep') ? parts[1] : null;
+  const subView = (parts[1] === 'editor' || parts[1] === 'deep' || parts[1] === 'concept') ? (parts[1] as 'editor' | 'deep' | 'concept') : null;
   const id = parts[2] ? decodeURIComponent(parts[2]) : null;
 
   return {

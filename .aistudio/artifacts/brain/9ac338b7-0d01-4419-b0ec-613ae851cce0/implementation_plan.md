@@ -1,28 +1,46 @@
-# Rencana Kerja: Penyempurnaan Header Editor Lirik & Kontinuitas Metronom
+# Rencana Kerja: Tahap 2 - Sistem Versi Lirik (Multi-Version Lyric Drafting)
 
-## Ringkasan Perubahan
-Menyesuaikan estetika header editor lirik agar konsisten, simetris, dan bersih sesuai dengan umpan balik visual dari pengguna. Menghilangkan inner box pada nilai Key & BPM, menyamakan tinggi ketiga tombol control, membuat custom dropdown menu untuk Status, membuat modal BPM dapat ditutup dengan mengklik area backdrop luar, serta menjaga audio metronom tetap berputar di latar belakang meskipun modal BPM ditutup.
+## Ringkasan Konsep & Sistem
+Menambahkan fitur **Versi Lirik** pada setiap proyek lagu. Penulis lagu dapat membuat beberapa variasi/draf lirik (misal: *Versi 1 - Draf Awal*, *Versi 2 - Reff Alternatif*, *Versi 3 - Final*), berpindah versi secara instan di editor, serta menentukan satu versi sebagai **`★ Versi Final`**. Saat lagu diklik dari daftar lirik di halaman utama, aplikasi akan secara otomatis membuka Versi Final tersebut.
 
 ---
 
-## Rincian Perbaikan
+## Rincian Perubahan & Arsitektur
 
-### 1. Desain Unboxed & Ukuran Simetris untuk Tombol Header (`LyricEditor.tsx`)
-- **Penghapusan Inner Box**: Menghapus background box abu-abu kecil di dalam nilai Key dan BPM sehingga nilai langsung tampil sebagai teks tebal polos (`Key: Em ▾`, `BPM: 140 ▾`).
-- **Konsistensi Tinggi & Padding**: Menyamakan tinggi (`h-8`) dan padding untuk tombol `Key`, `BPM`, dan `Status` baik di Desktop Header maupun Mobile Header.
+### 1. Struktur Tipe Data (`src/types/index.ts`)
+- Membuat interface `LyricVersion`:
+  ```ts
+  export interface LyricVersion {
+    id: string;
+    name: string;
+    content: string;
+    isFinal: boolean;
+    createdAt: number;
+  }
+  ```
+- Menambahkan field `versions?: LyricVersion[];` dan `activeVersionId?: string;` pada `SongDraft`.
 
-### 2. Custom Popover Dropdown untuk Status Lagu
-- **Penggantian Native `<select>` Browser**: Mengganti elemen `<select>` bawaan browser dengan custom popover dropdown buatan sendiri yang selaras dengan tema aplikasi.
-- **Visual Status Badge**: Setiap opsi status (`Draft`, `Proses`, `Release`) dilengkapi indikator visual warna yang menarik.
-- **Klik Luar untuk Menutup**: Popover otomatis menutup saat mengklik area di luar menu.
+### 2. Inisialisasi Otomatis & Kompatibilitas Data Lama (`useSongs.ts`)
+- **Lagu Baru**: Otomatis diawali dengan `Versi 1` yang ditandai `isFinal: true`.
+- **Lagu Lama**: Lagu yang sudah ada akan otomatis dikonversi dengan membuatkan `Versi 1` bertanda `isFinal: true` berisi konten lirik lamanya.
 
-### 3. Penutupan Modal BPM via Backdrop & Audio Berkelanjutan
-- **Backdrop Click**: Menambahkan listener `onClick={handleClose}` pada overlay latar belakang modal BPM (`BpmMetronomeModal.tsx`) sehingga modal dapat ditutup dengan mengklik area mana saja di luar modal.
-- **Mendukung Background Playback**: Mengubah siklus `isPlaying` agar metronom **tetap memutar audio** di latar belakang ketika modal ditutup. Audio hanya akan berhenti apabila pengguna menekan tombol *Stop* secara eksplisit atau saat pengguna keluar dari lembar editor lirik (`LyricEditor` unmount).
+### 3. UI Seksi Versi Lirik di Sidebar (`SongProjectDrawer.tsx`)
+Di dalam Sidebar Kanan di bawah bagian **"2. Versi Lirik"**:
+- **Daftar Versi Lirik**:
+  - Menampilkan nama versi, tanggal/waktu, serta *badge* emas **`★ Final`**.
+  - Menyorot versi yang sedang aktif diedit di kanvas TipTap.
+- **Fitur & Tombol Kontrol**:
+  - **`+ Buat Versi Baru`**: Pilihan *Duplikasi Versi Aktif* atau *Kanvas Kosong*.
+  - **Tombol `Set Final`**: Menjadikan versi terpilih sebagai Versi Final dengan 1 klik.
+  - **Ubah Nama Versi**: Mengubah nama versi (contoh: `"Versi 2 - Akustik"`).
+  - **Hapus Versi**: Menghapus versi (dinonaktifkan jika tinggal 1 versi tersisa).
+
+### 4. Integrasi dengan List Lirik Utama & Editor Canvas (`App.tsx` & `LyricEditor.tsx`)
+- **Buka dari List Utama**: Saat lagu diklik di `LyricListView`, aplikasi membaca versi yang memiliki `isFinal: true` dan memuat kontennya ke editor.
+- **Penyimpanan Real-Time**: Setiap ketikan atau perubahan akor di TipTap disimpan secara otomatis ke versi lirik yang sedang aktif.
 
 ---
 
 ## Verifikasi
 - Menjalankan `lint_applet` dan `compile_applet`.
-- Memastikan ketiga tombol di header terlihat simetris, rapi, dan konsisten secara estetika.
-- Memastikan metronom tetap berjalan dengan suara stabil ketika modal BPM ditutup.
+- Memastikan pembuatan versi baru, *switching* versi, dan penandaan Versi Final berfungsi sempurna.

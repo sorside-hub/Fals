@@ -4,6 +4,7 @@ import { BottomNav } from './components/BottomNav';
 import { TheoryLearnView } from './components/TheoryLearnView';
 import { LyricListView } from './components/lyrics/LyricListView';
 import { LyricEditor } from './components/LyricEditor';
+import { ConceptEditor } from './components/lyrics/ConceptEditor';
 import { BankBar } from './components/BankBar';
 import { ToolsView } from './components/ToolsView';
 import { BankBarPickerModal } from './components/BankBarPickerModal';
@@ -29,6 +30,14 @@ export default function App() {
     createSong,
     deleteSong,
     selectSong,
+    addVersion,
+    setFinalVersion,
+    switchVersion,
+    renameVersion,
+    deleteVersion,
+    addAudioMemo,
+    renameAudioMemo,
+    deleteAudioMemo,
   } = useSongs();
 
   const {
@@ -47,7 +56,7 @@ export default function App() {
   // Track active subView and sync current song when navigating in lyrics tab
   useEffect(() => {
     if (route.tab === 'lyrics') {
-      if (route.subView === 'editor') {
+      if (route.subView === 'editor' || route.subView === 'concept') {
         setLastLyricSubView('editor');
         if (route.id) {
           setLastActiveSongId(route.id);
@@ -66,8 +75,8 @@ export default function App() {
   const handleSelectTab = (tab: TabType) => {
     if (tab === 'lyrics') {
       if (route.tab === 'lyrics') {
-        // If currently ALREADY in lyrics tab and on editor: clicking lyrics tab toggles back to list view
-        if (route.subView === 'editor') {
+        // If currently ALREADY in lyrics tab and on editor/concept: clicking lyrics tab toggles back to list view
+        if (route.subView === 'editor' || route.subView === 'concept') {
           setLastLyricSubView('list');
           navigate('#lyrics');
         } else {
@@ -120,9 +129,10 @@ export default function App() {
   };
 
   const isLyricEditorOpen = route.tab === 'lyrics' && route.subView === 'editor';
+  const isLyricConceptOpen = route.tab === 'lyrics' && route.subView === 'concept';
   const isTheoryDeepDiveOpen = route.tab === 'learn' && route.subView === 'deep';
   const isBarEditorOpen = route.tab === 'bank' && route.subView === 'editor';
-  const isFullScreenEditor = isLyricEditorOpen || isBarEditorOpen;
+  const isFullScreenEditor = isLyricEditorOpen || isLyricConceptOpen || isBarEditorOpen;
 
   // Hide bottom navbar on mobile when keyboard is open in editors
   const shouldHideBottomNavOnMobile = isFullScreenEditor && isKeyboardVisible;
@@ -135,7 +145,7 @@ export default function App() {
       {/* Main Responsive Content Workspace */}
       <main
         className={`flex-1 w-full mx-auto pb-14 md:pb-16 ${
-          isLyricEditorOpen
+          isLyricEditorOpen || isLyricConceptOpen
             ? 'max-w-6xl px-0 sm:px-6 md:px-8 pt-1 sm:pt-3'
             : isBarEditorOpen
             ? 'max-w-6xl px-3 sm:px-6 md:px-8 pt-2 sm:pt-3'
@@ -154,15 +164,38 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab Lirik: Two-Step (List View ➔ Full Bleed Canvas Editor) */}
+        {/* Tab Lirik: Multi-View (List View ➔ Full Bleed Canvas Editor / Concept Editor) */}
         {route.tab === 'lyrics' && (
           <div className="animate-fade-in w-full">
-            {isLyricEditorOpen ? (
+            {isLyricConceptOpen ? (
+              <ConceptEditor
+                currentSong={currentSong}
+                onUpdateSong={updateSong}
+                onBack={goBack}
+              />
+            ) : isLyricEditorOpen ? (
               <LyricEditor
                 currentSong={currentSong}
                 onUpdateSong={updateSong}
                 barItems={barItems}
                 onOpenBarBankModal={() => setIsBankBarPickerOpen(true)}
+                onOpenConceptEditor={() => navigate(`#lyrics/concept/${currentSong.id}`)}
+                onAddVersion={(dup) => addVersion(currentSong.id, dup)}
+                onSetFinalVersion={(vId) => setFinalVersion(currentSong.id, vId)}
+                onSwitchVersion={(vId) => switchVersion(currentSong.id, vId)}
+                onRenameVersion={(vId, name) => renameVersion(currentSong.id, vId, name)}
+                onDeleteVersion={(vId) => deleteVersion(currentSong.id, vId)}
+                onAddAudioMemo={(name, duration, blob) => {
+                  const newMemo = {
+                    id: `audio-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                    name,
+                    duration,
+                    createdAt: Date.now(),
+                  };
+                  addAudioMemo(currentSong.id, newMemo, blob);
+                }}
+                onRenameAudioMemo={(memoId, name) => renameAudioMemo(currentSong.id, memoId, name)}
+                onDeleteAudioMemo={(memoId) => deleteAudioMemo(currentSong.id, memoId)}
                 insertedBarText={insertedBarText}
                 onClearInsertedBar={() => setInsertedBarText(null)}
                 onBack={goBack}
