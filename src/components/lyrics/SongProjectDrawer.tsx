@@ -146,6 +146,8 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
       id: song.activeVersionId || 'v-1',
       name: 'Versi 1',
       content: song.content,
+      key: song.key,
+      bpm: song.bpm,
       isFinal: true,
       createdAt: song.updatedAt,
     }
@@ -354,6 +356,16 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  {/* Middle Row: Key & BPM Info */}
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#F5F4EE] border border-[#E5E4DE] text-[#44403C] font-semibold">
+                      Key {ver.key || song.key || 'C'}
+                    </span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#F5F4EE] border border-[#E5E4DE] text-[#44403C] font-semibold">
+                      {ver.bpm || song.bpm || 95} BPM
+                    </span>
                   </div>
 
                   {/* Bottom Row: Active Status / Set Final Action */}

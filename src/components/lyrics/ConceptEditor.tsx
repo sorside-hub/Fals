@@ -58,7 +58,7 @@ export const ConceptEditor: React.FC<ConceptEditorProps> = ({
               type="button"
               onClick={onBack}
               className="hidden md:flex w-9 h-9 shrink-0 items-center justify-center rounded-lg border border-[#E5E4DE] bg-[#FFFFFF] hover:bg-[#F5F4EE] text-[#1C1917] transition cursor-pointer shadow-2xs"
-              title="Kembali ke Editor Lirik"
+              title="Kembali"
             >
               <ArrowLeft className="w-4 h-4 text-[#57534E]" />
             </button>

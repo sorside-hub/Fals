@@ -56,6 +56,10 @@ export const SongListModal: React.FC<SongListModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {songs.map(song => {
             const isSelected = song.id === currentSongId;
+            const finalVersion = song.versions?.find(v => v.isFinal) || song.versions?.[0];
+            const displayKey = finalVersion?.key || song.key || 'C';
+            const displayBpm = finalVersion?.bpm ?? song.bpm ?? 95;
+
             const updatedDate = new Date(song.updatedAt).toLocaleDateString('id-ID', {
               day: 'numeric',
               month: 'short',
@@ -87,9 +91,9 @@ export const SongListModal: React.FC<SongListModalProps> = ({
                       {song.title || 'Tanpa Judul'}
                     </h4>
                     <div className="flex items-center gap-2 text-[11px] text-[#78716C] mt-0.5 font-mono">
-                      <span>Nada {song.key}</span>
+                      <span>Nada {displayKey}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{song.bpm} BPM</span>
+                      <span>{displayBpm} BPM</span>
                       <span aria-hidden="true">·</span>
                       <span>{updatedDate}</span>
                     </div>

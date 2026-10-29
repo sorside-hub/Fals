@@ -1,11 +1,15 @@
 import React, { useRef, useEffect } from 'react';
 import { Check } from 'lucide-react';
+import { SongStatus } from '../../types';
 
 interface StatusPopoverProps {
   isOpen: boolean;
   onClose: () => void;
-  currentStatus: 'draft' | 'proses' | 'release';
-  onSelectStatus: (status: 'draft' | 'proses' | 'release') => void;
+  currentStatus: SongStatus | string;
+  onSelectStatus: (status: 'draft' | 'progress' | 'release' | 'final') => void;
+  mode?: 'project' | 'track';
+  align?: 'left' | 'right';
+  className?: string;
 }
 
 export const StatusPopover: React.FC<StatusPopoverProps> = ({
@@ -13,6 +17,9 @@ export const StatusPopover: React.FC<StatusPopoverProps> = ({
   onClose,
   currentStatus,
   onSelectStatus,
+  mode = 'project',
+  align = 'right',
+  className = '',
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -34,22 +41,30 @@ export const StatusPopover: React.FC<StatusPopoverProps> = ({
 
   if (!isOpen) return null;
 
-  const options: { key: 'draft' | 'proses' | 'release'; label: string; desc: string; badgeColor: string }[] = [
-    { key: 'draft', label: 'Draft', desc: 'Ide awal / konsep dasar', badgeColor: 'bg-[#78716C]' },
-    { key: 'proses', label: 'Proses', desc: 'Sedang direvisi & dipoles', badgeColor: 'bg-amber-500' },
-    { key: 'release', label: 'Release', desc: 'Lagu final & rampung', badgeColor: 'bg-emerald-500' },
-  ];
+  // Options based on mode: Track uses 'Final', Project (Single/EP/Album) uses 'Release'
+  const options: { key: 'draft' | 'progress' | 'release' | 'final'; label: string; badgeColor: string }[] =
+    mode === 'track'
+      ? [
+          { key: 'draft', label: 'Draft', badgeColor: 'bg-[#78716C]' },
+          { key: 'progress', label: 'Progress', badgeColor: 'bg-amber-500' },
+          { key: 'final', label: 'Final', badgeColor: 'bg-emerald-500' },
+        ]
+      : [
+          { key: 'draft', label: 'Draft', badgeColor: 'bg-[#78716C]' },
+          { key: 'progress', label: 'Progress', badgeColor: 'bg-amber-500' },
+          { key: 'release', label: 'Release', badgeColor: 'bg-emerald-500' },
+        ];
+
+  const alignmentClass = align === 'left' ? 'left-0' : 'right-0';
+  const normalizedCurrent = currentStatus === 'proses' ? 'progress' : currentStatus;
 
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-1.5 w-52 bg-[#FFFFFF] border border-[#E5E4DE] rounded-xl shadow-lg p-1.5 z-40 animate-scale-up space-y-0.5"
+      className={`absolute ${alignmentClass} top-full mt-1.5 w-36 sm:w-40 max-w-[calc(100vw-24px)] bg-[#FFFFFF] border border-[#E5E4DE] rounded-xl shadow-lg p-1 z-50 animate-scale-up space-y-0.5 ${className}`}
     >
-      <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-[#78716C]">
-        Status Progres
-      </div>
       {options.map((opt) => {
-        const isSelected = currentStatus === opt.key;
+        const isSelected = normalizedCurrent === opt.key;
         return (
           <button
             key={opt.key}
@@ -58,16 +73,13 @@ export const StatusPopover: React.FC<StatusPopoverProps> = ({
               onSelectStatus(opt.key);
               onClose();
             }}
-            className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition cursor-pointer text-xs ${
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition cursor-pointer text-xs ${
               isSelected ? 'bg-[#F5F4EE] font-bold text-[#1C1917]' : 'hover:bg-[#FAF9F5] text-[#44403C]'
             }`}
           >
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full shrink-0 ${opt.badgeColor}`} />
-              <div>
-                <div className="font-semibold text-xs">{opt.label}</div>
-                <div className="text-[10px] text-[#78716C] font-normal leading-none mt-0.5">{opt.desc}</div>
-              </div>
+              <span className="font-semibold text-xs">{opt.label}</span>
             </div>
             {isSelected && <Check className="w-3.5 h-3.5 text-[#1C1917] shrink-0" />}
           </button>
@@ -76,3 +88,4 @@ export const StatusPopover: React.FC<StatusPopoverProps> = ({
     </div>
   );
 };
+

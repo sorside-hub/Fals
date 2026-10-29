@@ -4,7 +4,7 @@ import { TabType } from '../types';
 export interface ParsedRoute {
   rawHash: string;
   tab: TabType;
-  subView?: 'editor' | 'deep' | 'concept' | null;
+  subView?: 'editor' | 'deep' | 'concept' | 'album' | null;
   id?: string | null;
 }
 
@@ -23,7 +23,9 @@ export function parseHash(hashStr: string): ParsedRoute {
   else if (rawTab === 'tools' || rawTab === 'alat') tab = 'tools';
   else tab = 'learn';
 
-  const subView = (parts[1] === 'editor' || parts[1] === 'deep' || parts[1] === 'concept') ? (parts[1] as 'editor' | 'deep' | 'concept') : null;
+  const subView = (parts[1] === 'editor' || parts[1] === 'deep' || parts[1] === 'concept' || parts[1] === 'album')
+    ? (parts[1] as 'editor' | 'deep' | 'concept' | 'album')
+    : null;
   const id = parts[2] ? decodeURIComponent(parts[2]) : null;
 
   return {
@@ -96,7 +98,7 @@ export function useAppNavigation() {
   }, [saveCurrentScroll, restoreScroll]);
 
   // Navigate explicitly to a new hash route
-  const navigate = useCallback((targetHash: string, preserveScroll = false) => {
+  const navigate = useCallback((targetHash: string, preserveScroll = false, replace = false) => {
     if (typeof window === 'undefined') return;
 
     const formatted = targetHash.startsWith('#') ? targetHash : `#${targetHash}`;
@@ -107,7 +109,11 @@ export function useAppNavigation() {
     }
 
     const parsed = parseHash(formatted);
-    window.history.pushState({ tab: parsed.tab, subView: parsed.subView, id: parsed.id }, '', formatted);
+    if (replace) {
+      window.history.replaceState({ tab: parsed.tab, subView: parsed.subView, id: parsed.id }, '', formatted);
+    } else {
+      window.history.pushState({ tab: parsed.tab, subView: parsed.subView, id: parsed.id }, '', formatted);
+    }
     setRoute(parsed);
     lastHashRef.current = formatted;
 

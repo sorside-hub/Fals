@@ -3,7 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
 import { CHROMATIC_NOTES } from '../utils/musicTheory';
-import { SongDraft, BarItem } from '../types';
+import { SongDraft, BarItem, SongStatus } from '../types';
 import { LyricWritingToolbar } from './lyrics/LyricWritingToolbar';
 import { ChordBadgeNode } from './lyrics/ChordBadgeExtension';
 import { SectionExtension } from './lyrics/SectionExtension';
@@ -35,6 +35,7 @@ interface LyricEditorProps {
   onRenameAudioMemo?: (memoId: string, newName: string) => void;
   onDeleteAudioMemo?: (memoId: string) => void;
   barItems?: BarItem[];
+  parentAlbum?: SongDraft;
   insertedBarText?: string | null;
   onClearInsertedBar?: () => void;
   onBack?: () => void;
@@ -62,6 +63,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   onRenameAudioMemo,
   onDeleteAudioMemo,
   barItems,
+  parentAlbum,
   insertedBarText,
   onClearInsertedBar,
   onBack
@@ -69,7 +71,10 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const [songTitle, setSongTitle] = useState(currentSong.title);
   const [songKey, setSongKey] = useState(currentSong.key || 'C');
   const [songBpm, setSongBpm] = useState(currentSong.bpm || 95);
-  const [songStatus, setSongStatus] = useState<'draft' | 'proses' | 'release'>(currentSong.status || 'draft');
+  const [songStatus, setSongStatus] = useState<SongStatus>(() => {
+    const raw = currentSong.status || 'draft';
+    return raw === 'proses' ? 'progress' : raw;
+  });
   const [selectedChordForInspection, setSelectedChordForInspection] = useState<string | null>(null);
   const [isKeySelectorOpen, setIsKeySelectorOpen] = useState(false);
   const [isBpmModalOpen, setIsBpmModalOpen] = useState(false);
@@ -188,11 +193,12 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       const updatedVersions = (currentSong.versions || []).map(v =>
         v.id === currentSong.activeVersionId ? { ...v, content: html } : v
       );
+      const finalVer = updatedVersions.find(v => v.isFinal) || updatedVersions[0];
       onUpdateSong({
         ...currentSong,
         title: songTitle,
-        key: songKey,
-        bpm: songBpm,
+        key: finalVer?.key || songKey,
+        bpm: finalVer?.bpm ?? songBpm,
         content: html,
         versions: updatedVersions.length > 0 ? updatedVersions : currentSong.versions,
         updatedAt: Date.now(),
@@ -209,6 +215,15 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       }
     }
   }, [currentSong.activeVersionId, currentSong.content, editor]);
+
+  // Sync Key & BPM when active version or song changes
+  useEffect(() => {
+    const activeVer = currentSong.versions?.find(v => v.id === currentSong.activeVersionId);
+    const targetKey = activeVer?.key || currentSong.key || 'C';
+    const targetBpm = activeVer?.bpm ?? currentSong.bpm ?? 95;
+    setSongKey(targetKey);
+    setSongBpm(targetBpm);
+  }, [currentSong.activeVersionId, currentSong.id]);
 
   // Handle incoming inserted bar from Bank Bar
   useEffect(() => {
@@ -230,23 +245,39 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
   const handleKeyChange = (val: string) => {
     setSongKey(val);
+    const updatedVersions = (currentSong.versions || []).map(v =>
+      v.id === currentSong.activeVersionId ? { ...v, key: val } : v
+    );
+    const finalVer = updatedVersions.find(v => v.isFinal) || updatedVersions[0];
     onUpdateSong({
       ...currentSong,
-      key: val,
+      key: finalVer?.key || val,
+      versions: updatedVersions,
       updatedAt: Date.now(),
     });
   };
 
   const handleBpmChange = (val: number) => {
     setSongBpm(val);
+    const updatedVersions = (currentSong.versions || []).map(v =>
+      v.id === currentSong.activeVersionId ? { ...v, bpm: val } : v
+    );
+    const finalVer = updatedVersions.find(v => v.isFinal) || updatedVersions[0];
     onUpdateSong({
       ...currentSong,
-      bpm: val,
+      bpm: finalVer?.bpm ?? val,
+      versions: updatedVersions,
       updatedAt: Date.now(),
     });
   };
 
-  const handleStatusChange = (val: 'draft' | 'proses' | 'release') => {
+  // Sync song status when currentSong updates
+  useEffect(() => {
+    const raw = currentSong.status || 'draft';
+    setSongStatus(raw === 'proses' ? 'progress' : raw);
+  }, [currentSong.status, currentSong.id]);
+
+  const handleStatusChange = (val: 'draft' | 'progress' | 'release' | 'final') => {
     setSongStatus(val);
     onUpdateSong({
       ...currentSong,
@@ -411,25 +442,36 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       {/* 1. Adaptive Header */}
       {/* DESKTOP HEADER (1 Single Row: [←] + Title + Key + Status) */}
       <div className="hidden md:flex sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] py-2.5 items-center justify-between gap-3">
-        {/* Left: Back button (icon only) & Big Inline Title */}
+        {/* Left: Back button (icon only) & Big Inline Title with parent album indicator */}
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           {onBack && (
             <button
               onClick={onBack}
               className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-[#E5E4DE] bg-[#FFFFFF] hover:bg-[#F5F4EE] text-[#1C1917] transition cursor-pointer shadow-2xs"
-              title="Kembali ke Daftar Lirik"
+              title={parentAlbum ? `Kembali ke ${parentAlbum.title}` : "Kembali ke Daftar Lirik"}
             >
               <ArrowLeft className="w-4 h-4 text-[#57534E]" />
             </button>
           )}
 
-          <input
-            type="text"
-            value={songTitle}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="Judul lagumu..."
-            className="flex-1 text-2xl font-extrabold text-[#1C1917] bg-transparent border-none outline-hidden tracking-tight placeholder:text-[#A8A29E] min-w-0"
-          />
+          <div className="flex-1 min-w-0">
+            {parentAlbum && (
+              <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#78716C] mb-0.5">
+                <span className="font-semibold uppercase text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                  {parentAlbum.projectType?.toUpperCase() || 'ALBUM'}
+                </span>
+                <span className="truncate max-w-[200px]">{parentAlbum.title}</span>
+                <span>/</span>
+              </div>
+            )}
+            <input
+              type="text"
+              value={songTitle}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              placeholder="Judul lagumu..."
+              className="w-full text-2xl font-extrabold text-[#1C1917] bg-transparent border-none outline-hidden tracking-tight placeholder:text-[#A8A29E] min-w-0"
+            />
+          </div>
         </div>
 
         {/* Right: Key, BPM & Status */}
@@ -479,6 +521,8 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
               onClose={() => setIsStatusOpen(false)}
               currentStatus={songStatus}
               onSelectStatus={handleStatusChange}
+              mode={parentAlbum ? 'track' : 'project'}
+              align="right"
             />
           </div>
 
@@ -544,6 +588,8 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
                 onClose={() => setIsMobileStatusOpen(false)}
                 currentStatus={songStatus}
                 onSelectStatus={handleStatusChange}
+                mode={parentAlbum ? 'track' : 'project'}
+                align="left"
               />
             </div>
           </div>
@@ -559,8 +605,14 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
           </button>
         </div>
 
-        {/* Row 2: Big full-width Title Input */}
+        {/* Row 2: Big full-width Title Input with optional album context */}
         <div className="pt-1">
+          {parentAlbum && (
+            <div className="flex items-center gap-1 text-[10px] font-mono text-[#78716C] mb-0.5">
+              <span className="font-semibold uppercase text-indigo-700">{parentAlbum.projectType?.toUpperCase() || 'ALBUM'}:</span>
+              <span className="truncate max-w-[200px]">{parentAlbum.title}</span>
+            </div>
+          )}
           <input
             type="text"
             value={songTitle}

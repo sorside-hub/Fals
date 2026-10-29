@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { TabType, SongDraft } from './types';
+import { TabType, SongDraft, ProjectType, SongStatus } from './types';
 import { BottomNav } from './components/BottomNav';
 import { TheoryLearnView } from './components/TheoryLearnView';
 import { LyricListView } from './components/lyrics/LyricListView';
 import { LyricEditor } from './components/LyricEditor';
 import { ConceptEditor } from './components/lyrics/ConceptEditor';
+import { AlbumProjectView } from './components/lyrics/AlbumProjectView';
 import { BankBar } from './components/BankBar';
 import { ToolsView } from './components/ToolsView';
 import { BankBarPickerModal } from './components/BankBarPickerModal';
@@ -26,10 +27,14 @@ export default function App() {
     songs,
     currentSong,
     currentSongId,
+    currentParentAlbum,
+    findSong,
     updateSong,
-    createSong,
+    createProject,
     deleteSong,
     selectSong,
+    addTrackToProject,
+    deleteTrackFromProject,
     addVersion,
     setFinalVersion,
     switchVersion,
@@ -60,23 +65,23 @@ export default function App() {
         setLastLyricSubView('editor');
         if (route.id) {
           setLastActiveSongId(route.id);
-          const targetSong = songs.find(s => s.id === route.id);
-          if (targetSong && targetSong.id !== currentSongId) {
-            selectSong(targetSong);
+          const found = findSong(route.id);
+          if (found && found.song.id !== currentSongId) {
+            selectSong(found.song, found.parentAlbum);
           }
         }
       } else {
         setLastLyricSubView('list');
       }
     }
-  }, [route, songs, currentSongId, selectSong]);
+  }, [route, findSong, currentSongId, selectSong]);
 
   // Tab switching via hash router
   const handleSelectTab = (tab: TabType) => {
     if (tab === 'lyrics') {
       if (route.tab === 'lyrics') {
-        // If currently ALREADY in lyrics tab and on editor/concept: clicking lyrics tab toggles back to list view
-        if (route.subView === 'editor' || route.subView === 'concept') {
+        // If currently ALREADY in lyrics tab and on editor/concept/album: clicking lyrics tab toggles back to list view
+        if (route.subView === 'editor' || route.subView === 'concept' || route.subView === 'album') {
           setLastLyricSubView('list');
           navigate('#lyrics');
         } else {
@@ -85,11 +90,10 @@ export default function App() {
         }
       } else {
         // Switching from ANOTHER tab (learn/bank/tools) back to lyrics tab:
-        // Only return to editor if user was previously in editor before leaving lyrics tab
         if (lastLyricSubView === 'editor') {
           const activeSongId = lastActiveSongId || currentSongId;
-          const exists = activeSongId && songs.some(s => s.id === activeSongId);
-          if (exists) {
+          const found = activeSongId ? findSong(activeSongId) : null;
+          if (found) {
             navigate(`#lyrics/editor/${activeSongId}`);
           } else {
             navigate('#lyrics');
@@ -105,19 +109,36 @@ export default function App() {
 
   // Lyric navigation
   const handleSelectSongFromList = (song: SongDraft) => {
-    selectSong(song);
-    setLastActiveSongId(song.id);
-    setLastLyricSubView('editor');
-    navigate(`#lyrics/editor/${song.id}`);
+    if (song.projectType === 'ep' || song.projectType === 'album') {
+      navigate(`#lyrics/album/${song.id}`);
+    } else {
+      selectSong(song);
+      setLastActiveSongId(song.id);
+      setLastLyricSubView('editor');
+      navigate(`#lyrics/editor/${song.id}`);
+    }
   };
 
-  const handleCreateSongFromList = (title: string, key: string, status?: 'draft' | 'proses' | 'release') => {
-    const created = createSong(title, key, status || 'draft');
+  const handleCreateProject = (
+    type: ProjectType,
+    title: string,
+    options?: {
+      key?: string;
+      concept?: string;
+      trackCount?: number;
+      status?: SongStatus;
+    }
+  ) => {
+    const created = createProject(type, title, options);
     if (created) {
-      selectSong(created);
-      setLastActiveSongId(created.id);
-      setLastLyricSubView('editor');
-      navigate(`#lyrics/editor/${created.id}`);
+      if (created.projectType === 'ep' || created.projectType === 'album') {
+        navigate(`#lyrics/album/${created.id}`);
+      } else {
+        selectSong(created);
+        setLastActiveSongId(created.id);
+        setLastLyricSubView('editor');
+        navigate(`#lyrics/editor/${created.id}`);
+      }
     }
   };
 
@@ -130,9 +151,13 @@ export default function App() {
 
   const isLyricEditorOpen = route.tab === 'lyrics' && route.subView === 'editor';
   const isLyricConceptOpen = route.tab === 'lyrics' && route.subView === 'concept';
+  const isAlbumOpen = route.tab === 'lyrics' && route.subView === 'album';
   const isTheoryDeepDiveOpen = route.tab === 'learn' && route.subView === 'deep';
   const isBarEditorOpen = route.tab === 'bank' && route.subView === 'editor';
   const isFullScreenEditor = isLyricEditorOpen || isLyricConceptOpen || isBarEditorOpen;
+
+  // Active album project if in album subView
+  const currentAlbumProject = isAlbumOpen ? songs.find(s => s.id === route.id) : null;
 
   // Hide bottom navbar on mobile when keyboard is open in editors
   const shouldHideBottomNavOnMobile = isFullScreenEditor && isKeyboardVisible;
@@ -145,7 +170,7 @@ export default function App() {
       {/* Main Responsive Content Workspace */}
       <main
         className={`flex-1 w-full mx-auto pb-14 md:pb-16 ${
-          isLyricEditorOpen || isLyricConceptOpen
+          isLyricEditorOpen || isLyricConceptOpen || isAlbumOpen
             ? 'max-w-6xl px-0 sm:px-6 md:px-8 pt-1 sm:pt-3'
             : isBarEditorOpen
             ? 'max-w-6xl px-3 sm:px-6 md:px-8 pt-2 sm:pt-3'
@@ -164,7 +189,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab Lirik: Multi-View (List View ➔ Full Bleed Canvas Editor / Concept Editor) */}
+        {/* Tab Lirik: Multi-View (List View ➔ Album View ➔ Full Bleed Canvas Editor / Concept Editor) */}
         {route.tab === 'lyrics' && (
           <div className="animate-fade-in w-full">
             {isLyricConceptOpen ? (
@@ -176,6 +201,7 @@ export default function App() {
             ) : isLyricEditorOpen ? (
               <LyricEditor
                 currentSong={currentSong}
+                parentAlbum={currentParentAlbum}
                 onUpdateSong={updateSong}
                 barItems={barItems}
                 onOpenBarBankModal={() => setIsBankBarPickerOpen(true)}
@@ -198,14 +224,38 @@ export default function App() {
                 onDeleteAudioMemo={(memoId) => deleteAudioMemo(currentSong.id, memoId)}
                 insertedBarText={insertedBarText}
                 onClearInsertedBar={() => setInsertedBarText(null)}
-                onBack={goBack}
+                onBack={() => {
+                  if (currentParentAlbum) {
+                    navigate(`#lyrics/album/${currentParentAlbum.id}`);
+                  } else {
+                    navigate('#lyrics');
+                  }
+                }}
+              />
+            ) : isAlbumOpen && currentAlbumProject ? (
+              <AlbumProjectView
+                project={currentAlbumProject}
+                onBackToStudio={() => navigate('#lyrics')}
+                onOpenConceptEditor={() => {
+                  selectSong(currentAlbumProject);
+                  navigate(`#lyrics/concept/${currentAlbumProject.id}`);
+                }}
+                onSelectTrack={(track) => {
+                  selectSong(track, currentAlbumProject);
+                  setLastActiveSongId(track.id);
+                  setLastLyricSubView('editor');
+                  navigate(`#lyrics/editor/${track.id}`);
+                }}
+                onAddTrack={addTrackToProject}
+                onDeleteTrack={deleteTrackFromProject}
+                onUpdateProject={updateSong}
               />
             ) : (
               <div className="max-w-5xl mx-auto">
                 <LyricListView
                   songs={songs}
                   onSelectSong={handleSelectSongFromList}
-                  onCreateSong={handleCreateSongFromList}
+                  onCreateProject={handleCreateProject}
                   onDeleteSong={deleteSong}
                 />
               </div>

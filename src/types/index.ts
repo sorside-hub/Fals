@@ -106,6 +106,8 @@ export interface LyricVersion {
   content: string;
   isFinal: boolean;
   createdAt: number;
+  key?: string;
+  bpm?: number;
 }
 
 export interface AudioMemo {
@@ -115,18 +117,24 @@ export interface AudioMemo {
   createdAt: number;
 }
 
+export type ProjectType = 'single' | 'ep' | 'album';
+
+export type SongStatus = 'draft' | 'progress' | 'release' | 'final' | 'proses';
+
 export interface SongDraft {
   id: string;
   title: string;
   content: string;
   concept?: string;
+  projectType?: ProjectType; // 'single' (default) | 'ep' | 'album'
+  tracks?: SongDraft[]; // Collection of tracks if projectType is 'ep' or 'album'
   versions?: LyricVersion[];
   activeVersionId?: string;
   audioMemos?: AudioMemo[];
   key: string;
   bpm: number;
   timeSignature: string;
-  status: 'draft' | 'proses' | 'release';
+  status: SongStatus;
   updatedAt: number;
   tags?: string[];
 }
