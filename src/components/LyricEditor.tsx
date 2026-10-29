@@ -3,7 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
 import { CHROMATIC_NOTES } from '../utils/musicTheory';
-import { SongDraft, BarItem, SongStatus } from '../types';
+import { SongDraft, BarItem, SongStatus, ProjectType } from '../types';
 import { LyricWritingToolbar } from './lyrics/LyricWritingToolbar';
 import { ChordBadgeNode } from './lyrics/ChordBadgeExtension';
 import { SectionExtension } from './lyrics/SectionExtension';
@@ -34,6 +34,10 @@ interface LyricEditorProps {
   onAddAudioMemo?: (name: string, duration: number, blob: Blob) => void;
   onRenameAudioMemo?: (memoId: string, newName: string) => void;
   onDeleteAudioMemo?: (memoId: string) => void;
+  onMoveSingleToAlbum?: (singleId: string, targetAlbumId: string) => void;
+  onConvertTrackToSingle?: (trackId: string, parentAlbumId: string) => void;
+  onCreateAlbumAndMove?: (title: string, type: ProjectType) => void;
+  albumProjects?: SongDraft[];
   barItems?: BarItem[];
   parentAlbum?: SongDraft;
   insertedBarText?: string | null;
@@ -62,6 +66,10 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   onAddAudioMemo,
   onRenameAudioMemo,
   onDeleteAudioMemo,
+  onMoveSingleToAlbum,
+  onConvertTrackToSingle,
+  onCreateAlbumAndMove,
+  albumProjects,
   barItems,
   parentAlbum,
   insertedBarText,
@@ -699,6 +707,8 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         isOpen={isProjectDrawerOpen}
         onClose={() => setIsProjectDrawerOpen(false)}
         song={currentSong}
+        parentAlbum={parentAlbum}
+        albumProjects={albumProjects}
         onOpenConceptEditor={onOpenConceptEditor || (() => {})}
         onAddVersion={onAddVersion || (() => {})}
         onSetFinalVersion={onSetFinalVersion || (() => {})}
@@ -708,6 +718,9 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         onAddAudioMemo={onAddAudioMemo}
         onRenameAudioMemo={onRenameAudioMemo}
         onDeleteAudioMemo={onDeleteAudioMemo}
+        onMoveSingleToAlbum={onMoveSingleToAlbum}
+        onConvertTrackToSingle={onConvertTrackToSingle}
+        onCreateAlbumAndMove={onCreateAlbumAndMove}
       />
 
       {/* 6. Interactive Chord Drawer Modal (Family Chords & Extensions) */}

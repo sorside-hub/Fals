@@ -13,6 +13,7 @@ import {
   FileText,
   Sparkles,
   BookOpen,
+  FolderOutput,
 } from 'lucide-react';
 import { StatusPopover } from './StatusPopover';
 
@@ -24,6 +25,7 @@ interface AlbumProjectViewProps {
   onDeleteTrack: (projectId: string, trackId: string) => void;
   onUpdateProject: (updated: SongDraft) => void;
   onOpenConceptEditor?: () => void;
+  onConvertTrackToSingle?: (trackId: string, parentAlbumId: string) => void;
 }
 
 export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
@@ -34,12 +36,14 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
   onDeleteTrack,
   onUpdateProject,
   onOpenConceptEditor,
+  onConvertTrackToSingle,
 }) => {
   const [title, setTitle] = useState(project.title || '');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isMobileStatusOpen, setIsMobileStatusOpen] = useState(false);
   const [trackToDelete, setTrackToDelete] = useState<SongDraft | null>(null);
+  const [trackToConvertToSingle, setTrackToConvertToSingle] = useState<SongDraft | null>(null);
 
   const tracks = project.tracks || [];
   const isEP = project.projectType === 'ep';
@@ -325,6 +329,19 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    {onConvertTrackToSingle && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTrackToConvertToSingle(track);
+                        }}
+                        className="p-1.5 text-[#78716C] hover:text-[#1C1917] hover:bg-[#F5F4EE] rounded-lg transition opacity-60 group-hover:opacity-100 cursor-pointer"
+                        title="Jadikan Single Terpisah"
+                      >
+                        <FolderOutput className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -451,6 +468,46 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
                 className="px-3.5 py-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition cursor-pointer shadow-2xs"
               >
                 Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Jadikan Single Terpisah */}
+      {trackToConvertToSingle && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in"
+          onClick={() => setTrackToConvertToSingle(null)}
+        >
+          <div
+            className="w-full max-w-sm bg-[#FAF9F5] border border-[#E5E4DE] rounded-2xl shadow-xl p-5 space-y-3 animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-bold text-[#1C1917]">Jadikan Single Terpisah?</h3>
+            <p className="text-xs text-[#78716C] leading-relaxed">
+              Track <span className="font-bold text-[#1C1917]">"{trackToConvertToSingle.title}"</span> akan dikeluarkan dari <span className="font-bold text-[#1C1917]">"{project.title}"</span> dan menjadi Single mandiri di daftar lagu. Semua data lirik, chord, versi, dan audio tetap aman.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E5E4DE]">
+              <button
+                type="button"
+                onClick={() => setTrackToConvertToSingle(null)}
+                className="px-3.5 py-1.5 text-xs font-medium text-[#78716C] hover:text-[#1C1917] hover:bg-[#EAE8DF] rounded-lg transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onConvertTrackToSingle) {
+                    onConvertTrackToSingle(trackToConvertToSingle.id, project.id);
+                  }
+                  setTrackToConvertToSingle(null);
+                }}
+                className="px-3.5 py-1.5 text-xs font-bold bg-[#1C1917] hover:bg-[#292524] text-white rounded-lg transition cursor-pointer shadow-2xs"
+              >
+                Jadikan Single
               </button>
             </div>
           </div>

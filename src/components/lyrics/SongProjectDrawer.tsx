@@ -13,15 +13,23 @@ import {
   Mic,
   Upload,
   FileAudio,
+  Disc,
+  Layers,
+  FolderInput,
+  FolderOutput,
+  Music,
 } from 'lucide-react';
-import { SongDraft, LyricVersion, AudioMemo } from '../../types';
+import { SongDraft, LyricVersion, AudioMemo, ProjectType } from '../../types';
 import { AudioPill } from './AudioPill';
 import { AudioRecorderModal } from './AudioRecorderModal';
+import { MoveToAlbumModal } from './MoveToAlbumModal';
 
 interface SongProjectDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   song: SongDraft;
+  parentAlbum?: SongDraft;
+  albumProjects?: SongDraft[];
   onOpenConceptEditor: () => void;
   onAddVersion: (duplicateFromActive: boolean) => void;
   onSetFinalVersion: (versionId: string) => void;
@@ -31,12 +39,17 @@ interface SongProjectDrawerProps {
   onAddAudioMemo?: (name: string, duration: number, blob: Blob) => void;
   onRenameAudioMemo?: (memoId: string, newName: string) => void;
   onDeleteAudioMemo?: (memoId: string) => void;
+  onMoveSingleToAlbum?: (singleId: string, targetAlbumId: string) => void;
+  onConvertTrackToSingle?: (trackId: string, parentAlbumId: string) => void;
+  onCreateAlbumAndMove?: (title: string, type: ProjectType) => void;
 }
 
 export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
   isOpen,
   onClose,
   song,
+  parentAlbum,
+  albumProjects = [],
   onOpenConceptEditor,
   onAddVersion,
   onSetFinalVersion,
@@ -46,6 +59,9 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
   onAddAudioMemo,
   onRenameAudioMemo,
   onDeleteAudioMemo,
+  onMoveSingleToAlbum,
+  onConvertTrackToSingle,
+  onCreateAlbumAndMove,
 }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,11 +77,19 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
   const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
   const [memoToDelete, setMemoToDelete] = useState<AudioMemo | null>(null);
 
+  // Move / Convert state
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [showConvertTrackConfirm, setShowConvertTrackConfirm] = useState(false);
+
   // Close on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (memoToDelete) {
+        if (showConvertTrackConfirm) {
+          setShowConvertTrackConfirm(false);
+        } else if (isMoveModalOpen) {
+          setIsMoveModalOpen(false);
+        } else if (memoToDelete) {
           setMemoToDelete(null);
         } else if (versionToDelete) {
           setVersionToDelete(null);
@@ -82,7 +106,7 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose, memoToDelete, versionToDelete, isRecordModalOpen]);
+  }, [isOpen, onClose, memoToDelete, versionToDelete, isRecordModalOpen, isMoveModalOpen, showConvertTrackConfirm]);
 
   if (!isOpen) return null;
 
@@ -492,6 +516,87 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
           )}
         </div>
 
+        {/* Section 4: Format & Wadah Proyek */}
+        <div className="space-y-2.5 pt-1">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#78716C]">
+              <span>4. Format & Wadah Lagu</span>
+            </div>
+          </div>
+
+          {parentAlbum ? (
+            /* Track inside an EP/Album */
+            <div className="p-3.5 bg-[#FFFFFF] border border-[#E5E4DE] rounded-xl space-y-3 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
+                    parentAlbum.projectType === 'ep'
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                      : 'bg-amber-50 border-amber-200 text-amber-700'
+                  }`}
+                >
+                  {parentAlbum.projectType === 'ep' ? (
+                    <Layers className="w-3.5 h-3.5" />
+                  ) : (
+                    <Disc className="w-3.5 h-3.5" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#78716C]">
+                    Track dari {parentAlbum.projectType === 'ep' ? 'EP' : 'Album'}
+                  </div>
+                  <div className="text-xs font-bold text-[#1C1917] truncate">
+                    {parentAlbum.title}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-[#78716C] leading-relaxed">
+                Ingin memisahkan lagu ini? Anda dapat mengubahnya menjadi Single mandiri di daftar utama tanpa kehilangan data lirik, chord, histori, dan rekaman audio.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setShowConvertTrackConfirm(true)}
+                className="w-full py-2 px-3 bg-[#F5F4EE] hover:bg-[#EAE8DF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-lg text-xs font-bold text-[#1C1917] flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <FolderOutput className="w-3.5 h-3.5 text-[#78716C]" />
+                <span>Jadikan Single Terpisah</span>
+              </button>
+            </div>
+          ) : (
+            /* Standalone Single */
+            <div className="p-3.5 bg-[#FFFFFF] border border-[#E5E4DE] rounded-xl space-y-3 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#FAF9F5] border border-[#E5E4DE] flex items-center justify-center shrink-0 text-[#1C1917]">
+                  <Music className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#78716C]">
+                    Format Lagu
+                  </div>
+                  <div className="text-xs font-bold text-[#1C1917]">
+                    Single Mandiri
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-[#78716C] leading-relaxed">
+                Punya konsep lagu yang cocok dengan EP atau Album tertentu? Pindahkan lagu ini ke dalam proyek tersebut sebagai track.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setIsMoveModalOpen(true)}
+                className="w-full py-2 px-3 bg-[#F5F4EE] hover:bg-[#EAE8DF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-lg text-xs font-bold text-[#1C1917] flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <FolderInput className="w-3.5 h-3.5 text-[#78716C]" />
+                <span>Pindahkan ke EP / Album</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Modal Konfirmasi Hapus Versi Lirik */}
         {versionToDelete && (
           <div
@@ -578,6 +683,72 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
             </div>
           </div>
         )}
+
+        {/* Modal Konfirmasi Jadikan Single Terpisah */}
+        {showConvertTrackConfirm && parentAlbum && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowConvertTrackConfirm(false);
+            }}
+          >
+            <div
+              className="w-full max-w-xs bg-[#FAF9F5] border border-[#E5E4DE] rounded-2xl shadow-xl p-5 space-y-3 animate-scale-up cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-sm font-bold text-[#1C1917]">Jadikan Single Terpisah?</h3>
+              <p className="text-xs text-[#78716C] leading-relaxed">
+                Track <span className="font-bold text-[#1C1917]">"{song.title || 'Tanpa Judul'}"</span> akan dikeluarkan dari <span className="font-bold text-[#1C1917]">"{parentAlbum.title}"</span> dan menjadi Single mandiri di daftar lagu. Semua data lirik, chord, versi, dan audio tetap aman.
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E5E4DE]">
+                <button
+                  type="button"
+                  onClick={() => setShowConvertTrackConfirm(false)}
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#78716C] hover:text-[#1C1917] hover:bg-[#EAE8DF] rounded-lg transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onConvertTrackToSingle) {
+                      onConvertTrackToSingle(song.id, parentAlbum.id);
+                    }
+                    setShowConvertTrackConfirm(false);
+                    onClose();
+                  }}
+                  className="px-3.5 py-1.5 text-xs font-bold bg-[#1C1917] hover:bg-[#292524] text-white rounded-lg transition cursor-pointer shadow-2xs"
+                >
+                  Jadikan Single
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Pemilihan EP/Album Tujuan untuk Single */}
+        <MoveToAlbumModal
+          isOpen={isMoveModalOpen}
+          onClose={() => setIsMoveModalOpen(false)}
+          song={song}
+          albumProjects={albumProjects}
+          onConfirmMove={(targetAlbumId) => {
+            if (onMoveSingleToAlbum) {
+              onMoveSingleToAlbum(song.id, targetAlbumId);
+            }
+            setIsMoveModalOpen(false);
+            onClose();
+          }}
+          onCreateAlbumAndMove={(title, type) => {
+            if (onCreateAlbumAndMove) {
+              onCreateAlbumAndMove(title, type);
+            }
+            setIsMoveModalOpen(false);
+            onClose();
+          }}
+        />
 
         {/* Modal Perekam Suara Langsung */}
         <AudioRecorderModal

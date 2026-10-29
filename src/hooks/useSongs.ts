@@ -332,7 +332,7 @@ export function useSongs() {
     }
 
     // EP or Album project
-    const defaultTrackCount = options?.trackCount || (type === 'ep' ? 4 : 8);
+    const defaultTrackCount = options?.trackCount !== undefined ? options.trackCount : (type === 'ep' ? 4 : 8);
     const generatedTracks: SongDraft[] = Array.from({ length: defaultTrackCount }).map((_, idx) => {
       const num = String(idx + 1).padStart(2, '0');
       const trackId = `track-${timestamp}-${idx + 1}`;
@@ -493,6 +493,91 @@ export function useSongs() {
     }));
   };
 
+  // Convert Single to Track inside EP/Album (100% data preservation)
+  const moveSingleToAlbum = (
+    singleId: string,
+    targetAlbumId: string
+  ): { movedTrack: SongDraft | null; targetAlbum: SongDraft | null } => {
+    const single = songs.find(s => s.id === singleId);
+    const album = songs.find(s => s.id === targetAlbumId);
+    if (!single || !album) {
+      return { movedTrack: null, targetAlbum: null };
+    }
+
+    const rawStatus = single.status || 'draft';
+    // In track context, status is draft | progress | final
+    const trackStatus: SongStatus = rawStatus === 'release' ? 'final' : rawStatus;
+
+    const newTrack: SongDraft = {
+      ...ensureSongVersions(single),
+      projectType: 'single',
+      status: trackStatus,
+      updatedAt: Date.now(),
+    };
+
+    const updatedAlbum: SongDraft = {
+      ...album,
+      tracks: [...(album.tracks || []), newTrack],
+      updatedAt: Date.now(),
+    };
+
+    setSongs(prev =>
+      prev
+        .filter(s => s.id !== singleId)
+        .map(s => s.id === targetAlbumId ? updatedAlbum : s)
+    );
+
+    setCurrentSongId(singleId);
+    setActiveParentAlbumId(targetAlbumId);
+
+    return { movedTrack: newTrack, targetAlbum: updatedAlbum };
+  };
+
+  // Convert Track from EP/Album to Standalone Single (100% data preservation)
+  const convertTrackToSingle = (
+    trackId: string,
+    parentAlbumId: string
+  ): SongDraft | null => {
+    const album = songs.find(s => s.id === parentAlbumId);
+    if (!album || !album.tracks) return null;
+
+    const track = album.tracks.find(t => t.id === trackId);
+    if (!track) return null;
+
+    // In single context, status is draft | progress | release
+    const rawStatus = track.status || 'draft';
+    const singleStatus: SongStatus = rawStatus === 'final' ? 'release' : rawStatus;
+
+    const newSingle: SongDraft = {
+      ...ensureSongVersions(track),
+      projectType: 'single',
+      status: singleStatus,
+      updatedAt: Date.now(),
+    };
+
+    const updatedTracks = album.tracks.filter(t => t.id !== trackId);
+    const updatedAlbum: SongDraft = {
+      ...album,
+      tracks: updatedTracks,
+      updatedAt: Date.now(),
+    };
+
+    setSongs(prev => {
+      const albumIdx = prev.findIndex(s => s.id === parentAlbumId);
+      if (albumIdx === -1) return prev;
+      const nextSongs = [...prev];
+      nextSongs[albumIdx] = updatedAlbum;
+      // Place the converted single right above the album
+      nextSongs.splice(albumIdx, 0, newSingle);
+      return nextSongs;
+    });
+
+    setCurrentSongId(trackId);
+    setActiveParentAlbumId(null);
+
+    return newSingle;
+  };
+
   // Version management actions (works for both standalone single and album tracks)
   const addVersion = (songId: string, duplicateFromActive = true) => {
     setSongs(prev => applyToSongOrTrack(prev, songId, (song) => {
@@ -635,6 +720,8 @@ export function useSongs() {
     selectSong,
     addTrackToProject,
     deleteTrackFromProject,
+    moveSingleToAlbum,
+    convertTrackToSingle,
     updateProjectConcept,
     addVersion,
     setFinalVersion,

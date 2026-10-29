@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TabType, SongDraft, ProjectType, SongStatus } from './types';
 import { BottomNav } from './components/BottomNav';
 import { TheoryLearnView } from './components/TheoryLearnView';
@@ -35,6 +35,8 @@ export default function App() {
     selectSong,
     addTrackToProject,
     deleteTrackFromProject,
+    moveSingleToAlbum,
+    convertTrackToSingle,
     addVersion,
     setFinalVersion,
     switchVersion,
@@ -149,6 +151,42 @@ export default function App() {
     navigate(`#lyrics/editor/${currentSong.id}`);
   };
 
+  // Available EP and Album projects for moving singles
+  const albumProjects = useMemo(() => {
+    return songs.filter(s => s.projectType === 'ep' || s.projectType === 'album');
+  }, [songs]);
+
+  const handleMoveSingleToAlbum = (singleId: string, targetAlbumId: string) => {
+    const result = moveSingleToAlbum(singleId, targetAlbumId);
+    if (result.movedTrack && result.targetAlbum) {
+      selectSong(result.movedTrack, result.targetAlbum);
+      setLastActiveSongId(result.movedTrack.id);
+      setLastLyricSubView('editor');
+      navigate(`#lyrics/editor/${result.movedTrack.id}`);
+    }
+  };
+
+  const handleCreateAlbumAndMove = (title: string, type: ProjectType) => {
+    const created = createProject(type, title, { trackCount: 0 });
+    if (created) {
+      handleMoveSingleToAlbum(currentSong.id, created.id);
+    }
+  };
+
+  const handleConvertTrackToSingle = (trackId: string, parentAlbumId: string) => {
+    const converted = convertTrackToSingle(trackId, parentAlbumId);
+    if (converted) {
+      selectSong(converted);
+      setLastActiveSongId(converted.id);
+      if (isAlbumOpen) {
+        // Track list in album view automatically reflects the removal
+      } else {
+        setLastLyricSubView('editor');
+        navigate(`#lyrics/editor/${converted.id}`);
+      }
+    }
+  };
+
   const isLyricEditorOpen = route.tab === 'lyrics' && route.subView === 'editor';
   const isLyricConceptOpen = route.tab === 'lyrics' && route.subView === 'concept';
   const isAlbumOpen = route.tab === 'lyrics' && route.subView === 'album';
@@ -202,6 +240,7 @@ export default function App() {
               <LyricEditor
                 currentSong={currentSong}
                 parentAlbum={currentParentAlbum}
+                albumProjects={albumProjects}
                 onUpdateSong={updateSong}
                 barItems={barItems}
                 onOpenBarBankModal={() => setIsBankBarPickerOpen(true)}
@@ -222,6 +261,9 @@ export default function App() {
                 }}
                 onRenameAudioMemo={(memoId, name) => renameAudioMemo(currentSong.id, memoId, name)}
                 onDeleteAudioMemo={(memoId) => deleteAudioMemo(currentSong.id, memoId)}
+                onMoveSingleToAlbum={handleMoveSingleToAlbum}
+                onConvertTrackToSingle={handleConvertTrackToSingle}
+                onCreateAlbumAndMove={handleCreateAlbumAndMove}
                 insertedBarText={insertedBarText}
                 onClearInsertedBar={() => setInsertedBarText(null)}
                 onBack={() => {
@@ -248,6 +290,7 @@ export default function App() {
                 }}
                 onAddTrack={addTrackToProject}
                 onDeleteTrack={deleteTrackFromProject}
+                onConvertTrackToSingle={handleConvertTrackToSingle}
                 onUpdateProject={updateSong}
               />
             ) : (
