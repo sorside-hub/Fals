@@ -24,7 +24,6 @@ interface LyricEditorProps {
   currentSong: SongDraft;
   onUpdateSong: (song: SongDraft) => void;
   onOpenSongManager?: () => void;
-  onOpenBarBankModal?: () => void;
   onOpenConceptEditor?: () => void;
   onAddVersion?: (duplicateFromActive: boolean) => void;
   onSetFinalVersion?: (versionId: string) => void;
@@ -56,7 +55,6 @@ function formatChordsForEditor(rawContent: string): string {
 export const LyricEditor: React.FC<LyricEditorProps> = ({
   currentSong,
   onUpdateSong,
-  onOpenBarBankModal,
   onOpenConceptEditor,
   onAddVersion,
   onSetFinalVersion,

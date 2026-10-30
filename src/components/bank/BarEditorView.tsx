@@ -41,6 +41,14 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
   const [tagInput, setTagInput] = useState<string>('');
   const [isCopied, setIsCopied] = useState(false);
 
+  const formattedDate = useMemo(() => {
+    return new Date(bar.createdAt || Date.now()).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).toUpperCase();
+  }, [bar.createdAt]);
+
   // Popover state
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isRhymeOpen, setIsRhymeOpen] = useState(false);
@@ -221,6 +229,10 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono text-[#78716C] mr-0.5">
+              {formattedDate}
+            </span>
+
             {/* Copy Button: Icon only */}
             <button
               type="button"

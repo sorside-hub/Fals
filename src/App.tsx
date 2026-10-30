@@ -8,7 +8,6 @@ import { ConceptEditor } from './components/lyrics/ConceptEditor';
 import { AlbumProjectView } from './components/lyrics/AlbumProjectView';
 import { BankBar } from './components/BankBar';
 import { ToolsView } from './components/ToolsView';
-import { BankBarPickerModal } from './components/BankBarPickerModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { useSongs } from './hooks/useSongs';
 import { useBarBank } from './hooks/useBarBank';
@@ -55,12 +54,13 @@ export default function App() {
   } = useBarBank();
 
   // Modal and insertion states
-  const [isBankBarPickerOpen, setIsBankBarPickerOpen] = useState(false);
   const [insertedBarText, setInsertedBarText] = useState<string | null>(null);
   const [lastActiveSongId, setLastActiveSongId] = useState<string | null>(currentSongId);
   const [lastLyricSubView, setLastLyricSubView] = useState<'list' | 'editor'>('list');
+  const [lastActiveBarId, setLastActiveBarId] = useState<string | null>(null);
+  const [lastBankSubView, setLastBankSubView] = useState<'list' | 'editor'>('list');
 
-  // Track active subView and sync current song when navigating in lyrics tab
+  // Track active subView and sync current song/bar when navigating in tabs
   useEffect(() => {
     if (route.tab === 'lyrics') {
       if (route.subView === 'editor' || route.subView === 'concept') {
@@ -74,6 +74,15 @@ export default function App() {
         }
       } else {
         setLastLyricSubView('list');
+      }
+    } else if (route.tab === 'bank') {
+      if (route.subView === 'editor') {
+        setLastBankSubView('editor');
+        if (route.id) {
+          setLastActiveBarId(route.id);
+        }
+      } else {
+        setLastBankSubView('list');
       }
     }
   }, [route, findSong, currentSongId, selectSong]);
@@ -102,6 +111,31 @@ export default function App() {
           }
         } else {
           navigate('#lyrics');
+        }
+      }
+    } else if (tab === 'bank') {
+      if (route.tab === 'bank') {
+        // If currently ALREADY in bank tab and in editor: clicking bank tab toggles back to list view
+        if (route.subView === 'editor') {
+          setLastBankSubView('list');
+          navigate('#bank');
+        } else {
+          navigate('#bank');
+        }
+      } else {
+        // Switching from ANOTHER tab back to bank:
+        if (lastBankSubView === 'editor') {
+          const activeBarId = lastActiveBarId;
+          const found = activeBarId && activeBarId !== 'new' ? barItems.find(b => b.id === activeBarId) : null;
+          if (found) {
+            navigate(`#bank/editor/${activeBarId}`);
+          } else if (activeBarId === 'new') {
+            navigate('#bank/editor/new');
+          } else {
+            navigate('#bank');
+          }
+        } else {
+          navigate('#bank');
         }
       }
     } else {
@@ -243,7 +277,6 @@ export default function App() {
                 albumProjects={albumProjects}
                 onUpdateSong={updateSong}
                 barItems={barItems}
-                onOpenBarBankModal={() => setIsBankBarPickerOpen(true)}
                 onOpenConceptEditor={() => navigate(`#lyrics/concept/${currentSong.id}`)}
                 onAddVersion={(dup) => addVersion(currentSong.id, dup)}
                 onSetFinalVersion={(vId) => setFinalVersion(currentSong.id, vId)}
@@ -317,8 +350,15 @@ export default function App() {
               onSendToLyric={handleSendToLyric}
               isEditorActive={isBarEditorOpen}
               activeBarId={route.id}
-              onNavigateToEditor={(barId) => navigate(`#bank/editor/${barId}`)}
-              onBackFromEditor={goBack}
+              onNavigateToEditor={(barId) => {
+                setLastActiveBarId(barId);
+                setLastBankSubView('editor');
+                navigate(`#bank/editor/${barId}`);
+              }}
+              onBackFromEditor={() => {
+                setLastBankSubView('list');
+                navigate('#bank');
+              }}
             />
           </div>
         )}
@@ -330,17 +370,6 @@ export default function App() {
           </div>
         )}
       </main>
-
-      {/* Quick Bank Bar Picker Modal (for inserting inside TipTap) */}
-      <BankBarPickerModal
-        isOpen={isBankBarPickerOpen}
-        onClose={() => setIsBankBarPickerOpen(false)}
-        barItems={barItems}
-        onInsertBar={(text) => {
-          setInsertedBarText(text);
-          setIsBankBarPickerOpen(false);
-        }}
-      />
 
       {/* Persistent Bottom Navigation (Auto-hidden on mobile when keyboard is open in editors) */}
       <div className={shouldHideBottomNavOnMobile ? 'hidden md:block' : 'block'}>

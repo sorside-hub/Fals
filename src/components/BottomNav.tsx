@@ -37,11 +37,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             >
               <div className="relative">
                 <Icon className={`w-4 h-4 transition-transform ${isActive ? 'scale-105' : ''}`} />
-                {tab.id === 'bank' && bankBarCount > 0 && (
-                  <span className="absolute -top-1 -right-2 text-[8px] font-mono font-bold bg-[#1C1917] text-[#FAF9F5] w-3 h-3 rounded-full flex items-center justify-center">
-                    {bankBarCount > 9 ? '9+' : bankBarCount}
-                  </span>
-                )}
               </div>
               <span className={`text-[9.5px] tracking-tight mt-0.5 font-medium leading-none ${isActive ? 'font-bold' : ''}`}>
                 {tab.label}

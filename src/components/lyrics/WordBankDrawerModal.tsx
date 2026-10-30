@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { X, Search, Sparkles, Send, Plus, BookOpen, Layers } from 'lucide-react';
+import { X, Search, Sparkles, Send, Plus, BookOpen } from 'lucide-react';
 import { BarItem } from '../../types';
 
 export interface WordBankDrawerModalProps {
@@ -9,85 +9,35 @@ export interface WordBankDrawerModalProps {
   barItems?: BarItem[];
 }
 
-interface WordItem {
-  id: string;
-  category: 'bank' | 'rhyme' | 'diction' | 'phrase' | 'alliteration';
-  categoryLabel: string;
-  text: string;
-  meaning?: string;
-  tag?: string;
-}
-
-const DEFAULT_WORD_ITEMS: WordItem[] = [
-  // 1. RIMA AKHIR (-ang, -an, -at, -ih, -i, -a, dll)
-  { id: 'r1', category: 'rhyme', categoryLabel: 'Rima -ang', text: 'terbayang', tag: 'AABB' },
-  { id: 'r2', category: 'rhyme', categoryLabel: 'Rima -ang', text: 'tenang', tag: 'AABB' },
-  { id: 'r3', category: 'rhyme', categoryLabel: 'Rima -ang', text: 'menyangkal', tag: 'ABAB' },
-  { id: 'r4', category: 'rhyme', categoryLabel: 'Rima -ang', text: 'terkembang', tag: 'AABB' },
-  { id: 'r5', category: 'rhyme', categoryLabel: 'Rima -an', text: 'harapan', tag: 'AABB' },
-  { id: 'r6', category: 'rhyme', categoryLabel: 'Rima -an', text: 'keheningan', tag: 'AABB' },
-  { id: 'r7', category: 'rhyme', categoryLabel: 'Rima -an', text: 'jawaban', tag: 'ABAB' },
-  { id: 'r8', category: 'rhyme', categoryLabel: 'Rima -ih', text: 'perih', tag: 'AABB' },
-  { id: 'r9', category: 'rhyme', categoryLabel: 'Rima -ih', text: 'memilih', tag: 'ABAB' },
-  { id: 'r10', category: 'rhyme', categoryLabel: 'Rima -ih', text: 'jernih', tag: 'AABB' },
-
-  // 2. DIKSI & SINONIM PUITIS
-  { id: 'd1', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'saujana', meaning: 'Sejauh mata memandang; luas membentang', tag: 'Luas' },
-  { id: 'd2', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'kalbu', meaning: 'Bagian terdalam batin manusia', tag: 'Hati' },
-  { id: 'd3', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'relung', meaning: 'Ruang terdalam yang tersembunyi', tag: 'Dalam' },
-  { id: 'd4', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'laksana', tag: 'Seperti' },
-  { id: 'd5', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'gelora', tag: 'Semangat' },
-  { id: 'd6', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'nestapa', meaning: 'Duka nestapa yang mendalam', tag: 'Duka' },
-  { id: 'd7', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'senandika', meaning: 'Wacana seorang diri; bicara dalam hati', tag: 'Bicara Sendiri' },
-  { id: 'd8', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'anila', meaning: 'Angin sepoi yang berhembus', tag: 'Angin' },
-  { id: 'd9', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'purnama', tag: 'Bulan' },
-  { id: 'd10', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'nirwana', tag: 'Surga' },
-
-  // 3. FRASA LIRIK INSPIRATIF
-  { id: 'f1', category: 'phrase', categoryLabel: 'Frasa Lirik', text: 'Di balik tirai malam yang hening', tag: 'Pembuka' },
-  { id: 'f2', category: 'phrase', categoryLabel: 'Frasa Lirik', text: 'Langkah kaki yang tak lagi ragu', tag: 'Transisi' },
-  { id: 'f3', category: 'phrase', categoryLabel: 'Frasa Lirik', text: 'Menyimpan rindu yang tak kunjung padam', tag: 'Punchline' },
-  { id: 'f4', category: 'phrase', categoryLabel: 'Frasa Lirik', text: 'Harmoni tercipta tanpa batas lagi', tag: 'Chorus' },
-  { id: 'f5', category: 'phrase', categoryLabel: 'Frasa Lirik', text: 'Mencari kata di antara sunyi', tag: 'Metafora' },
-  { id: 'f6', category: 'phrase', categoryLabel: 'Frasa Lirik', text: 'Jejak waktu yang terhapus hujan', tag: 'Penutup' },
-
-  // 4. ALITERASI (PENGULANGAN BUNYI)
-  { id: 'a1', category: 'alliteration', categoryLabel: 'Aliterasi S', text: 'Suara sunyi menyapa kalbu', tag: 'Bunyi S' },
-  { id: 'a2', category: 'alliteration', categoryLabel: 'Aliterasi B', text: 'Bayang-bayang berbisik pelan', tag: 'Bunyi B' },
-  { id: 'a3', category: 'alliteration', categoryLabel: 'Aliterasi D', text: 'Desir angin dingin menerpa', tag: 'Bunyi D' },
-  { id: 'a4', category: 'alliteration', categoryLabel: 'Aliterasi M', text: 'Malam makin membisu dingin', tag: 'Bunyi M' },
-];
-
 export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
   isOpen,
   onClose,
   onInsertText,
-  barItems,
+  barItems = [],
 }) => {
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'all' | 'bank' | 'rhyme' | 'diction' | 'phrase' | 'alliteration'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Swipe-down drag-to-dismiss state
   const [dragOffset, setDragOffset] = useState(0);
   const isDraggingRef = useRef(false);
   const startYRef = useRef(0);
 
-  // Map user saved Amunisi items from useBarBank
-  const userBankItems: WordItem[] = useMemo(() => {
-    if (!barItems || barItems.length === 0) return [];
-    return barItems.map((b) => ({
-      id: `saved-${b.id}`,
-      category: 'bank',
-      categoryLabel: b.category ? `Amunisi (${b.category})` : 'Amunisi Tersimpan',
-      text: b.text,
-      meaning: b.meaning,
-      tag: b.rhymeScheme && b.rhymeScheme !== 'Free' ? b.rhymeScheme : (b.tags?.[0] || 'Amunisi'),
-    }));
-  }, [barItems]);
+  const categories = [
+    { key: 'all', label: 'Semua' },
+    { key: 'diksi', label: 'Diksi' },
+    { key: 'metafor', label: 'Metafor' },
+    { key: 'bar', label: 'Bar' },
+    { key: 'hook', label: 'Hook' },
+  ];
 
-  const allItems = useMemo(() => {
-    return [...userBankItems, ...DEFAULT_WORD_ITEMS];
-  }, [userBankItems]);
+  const getCategoryBadgeLabel = (cat: string) => {
+    if (cat === 'diksi') return 'Diksi';
+    if (cat === 'metafor' || cat === 'metaphor' || cat === 'idea') return 'Metafor';
+    if (cat === 'bar' || cat === 'punchline' || cat === 'rhyme') return 'Bar';
+    if (cat === 'hook') return 'Hook';
+    return cat;
+  };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -106,7 +56,7 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
     }
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = () => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
     if (dragOffset > 60) {
@@ -119,8 +69,6 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
     isDraggingRef.current = false;
     setDragOffset(0);
   };
-
-  if (!isOpen) return null;
 
   const handleSelectWord = (text: string) => {
     onInsertText(text);
@@ -136,16 +84,34 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
     }
   };
 
-  const filteredItems = allItems.filter((item) => {
-    const matchCat = category === 'all' || item.category === category;
-    const q = search.toLowerCase();
-    const matchSearch =
-      search.trim() === '' ||
-      item.text.toLowerCase().includes(q) ||
-      (item.meaning && item.meaning.toLowerCase().includes(q)) ||
-      item.categoryLabel.toLowerCase().includes(q);
-    return matchCat && matchSearch;
-  });
+  const filteredItems = useMemo(() => {
+    return barItems.filter((item) => {
+      let matchCat = selectedCategory === 'all';
+      if (!matchCat) {
+        if (selectedCategory === 'diksi') matchCat = item.category === 'diksi';
+        else if (selectedCategory === 'metafor') {
+          matchCat = item.category === 'metafor' || (item.category as string) === 'metaphor' || (item.category as string) === 'idea';
+        } else if (selectedCategory === 'bar') {
+          matchCat = item.category === 'bar' || (item.category as string) === 'punchline' || (item.category as string) === 'rhyme';
+        } else if (selectedCategory === 'hook') {
+          matchCat = item.category === 'hook';
+        } else {
+          matchCat = item.category === selectedCategory;
+        }
+      }
+
+      const q = search.toLowerCase().trim();
+      const matchSearch =
+        q === '' ||
+        item.text.toLowerCase().includes(q) ||
+        (item.meaning && item.meaning.toLowerCase().includes(q)) ||
+        item.tags?.some((t) => t.toLowerCase().includes(q));
+
+      return matchCat && matchSearch;
+    });
+  }, [barItems, selectedCategory, search]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-fade-in">
@@ -172,28 +138,22 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
           <div className="w-12 h-1.5 bg-[#D6D3D1] rounded-full hover:bg-[#A8A29E] active:bg-[#78716C] transition-colors" />
         </div>
 
-        {/* Header */}
+        {/* Minimalist Header: Icon + "Amunisi" (No subtitle) */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#FFFFFF] border-b border-[#E5E4DE]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#F5F4EE] border border-[#E5E4DE] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-[#1C1917]" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-[#1C1917]">Amunisi & Gudang Kata</h3>
-              <p className="text-[11px] text-[#78716C]">
-                {userBankItems.length > 0 ? `${userBankItems.length} Amunisi Tersimpan · ` : ''}Diksi, Metafor, Rima & Frasa
-              </p>
-            </div>
+            <Sparkles className="w-4 h-4 text-[#1C1917]" />
+            <h3 className="text-sm font-bold text-[#1C1917] tracking-tight">Amunisi</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-[#78716C] hover:text-[#1C1917] hover:bg-[#F5F4EE] transition cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#F5F4EE] transition cursor-pointer"
+            title="Tutup"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Search & Filter Bar */}
+        {/* Search & Centered Category Tabs */}
         <div className="p-3 bg-[#FAF9F5] border-b border-[#E5E4DE] space-y-2.5">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -202,14 +162,14 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari amunisi tersimpan, makna, rima, atau diksi..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-[#1C1917] outline-hidden focus:border-[#1C1917] placeholder:text-[#A8A29E]"
+                placeholder="Cari kata, metafor, makna, atau bar..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#FFFFFF] border border-[#E5E4DE] rounded-xl text-[#1C1917] outline-hidden focus:border-[#1C1917] placeholder:text-[#A8A29E] shadow-2xs"
               />
             </div>
             {search.trim() && (
               <button
                 type="submit"
-                className="px-3 py-1.5 text-xs font-mono font-bold bg-[#1C1917] text-[#FFFFFF] rounded-lg transition hover:bg-[#292524] cursor-pointer shrink-0 flex items-center gap-1"
+                className="px-3 py-1.5 text-xs font-mono font-bold bg-[#1C1917] text-[#FFFFFF] rounded-xl transition hover:bg-[#292524] cursor-pointer shrink-0 flex items-center gap-1 shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Sisipkan</span>
@@ -217,79 +177,128 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
             )}
           </form>
 
-          {/* Category Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[11px] font-mono">
-            {[
-              { id: 'all', label: 'Semua' },
-              ...(userBankItems.length > 0 ? [{ id: 'bank', label: `Amunisi (${userBankItems.length})` }] : []),
-              { id: 'diction', label: 'Diksi & Kata' },
-              { id: 'rhyme', label: 'Rima Akhir' },
-              { id: 'phrase', label: 'Frasa Lirik' },
-              { id: 'alliteration', label: 'Aliterasi' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setCategory(tab.id as any)}
-                className={`px-2.5 py-1 rounded-md transition cursor-pointer shrink-0 ${
-                  category === tab.id
-                    ? 'bg-[#1C1917] text-[#FAF9F5] font-bold shadow-2xs'
-                    : 'bg-[#FFFFFF] text-[#78716C] border border-[#E5E4DE] hover:text-[#1C1917]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* Segmented Category Tabs (Centered, identical to list amunisi) */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-1 p-1 bg-[#F5F4EE] border border-[#E5E4DE] rounded-xl overflow-x-auto scrollbar-none text-xs">
+              {categories.map((cat) => (
+                <button
+                  key={cat.key}
+                  onClick={() => setSelectedCategory(cat.key)}
+                  className={`px-3.5 py-1 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                    selectedCategory === cat.key
+                      ? 'bg-[#FFFFFF] text-[#1C1917] shadow-2xs font-semibold'
+                      : 'text-[#78716C] hover:text-[#1C1917]'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Word Items Grid / List */}
-        <div className="flex-1 overflow-y-auto p-3.5 space-y-2">
+        {/* Items List (Cards styled identically to BankBarListView) */}
+        <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5">
           {filteredItems.length === 0 ? (
-            <div className="p-8 text-center space-y-2">
+            <div className="p-8 text-center space-y-2 bg-[#FFFFFF] border border-[#E5E4DE] rounded-2xl">
               <p className="text-xs text-[#78716C]">
-                Tidak ada kata atau frasa yang cocok dengan &quot;{search}&quot;.
+                {search.trim()
+                  ? `Tidak ada amunisi yang cocok dengan "${search.trim()}".`
+                  : 'Belum ada amunisi di kategori ini.'}
               </p>
-              <button
-                type="button"
-                onClick={() => handleSelectWord(search.trim())}
-                className="px-3.5 py-1.5 bg-[#1C1917] text-white rounded-lg text-xs font-mono font-bold cursor-pointer inline-flex items-center gap-1"
-              >
-                <Send className="w-3 h-3" />
-                <span>Tetap Sisipkan &quot;{search.trim()}&quot;</span>
-              </button>
+              {search.trim() && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectWord(search.trim())}
+                  className="px-3.5 py-1.5 bg-[#1C1917] text-white rounded-xl text-xs font-mono font-semibold cursor-pointer inline-flex items-center gap-1 shadow-xs"
+                >
+                  <Send className="w-3 h-3" />
+                  <span>Tetap Sisipkan &quot;{search.trim()}&quot;</span>
+                </button>
+              )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {filteredItems.map((item) => (
+            filteredItems.map((item) => {
+              const isBarOrHook =
+                item.category === 'bar' ||
+                item.category === 'hook' ||
+                (item.category as string) === 'punchline' ||
+                (item.category as string) === 'rhyme';
+              const isDiksiOrMetafor =
+                item.category === 'diksi' ||
+                item.category === 'metafor' ||
+                (item.category as string) === 'metaphor' ||
+                (item.category as string) === 'idea';
+              const formattedDate = new Date(item.createdAt || Date.now())
+                .toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })
+                .toUpperCase();
+
+              return (
                 <div
                   key={item.id}
                   onClick={() => handleSelectWord(item.text)}
-                  className="p-2.5 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer group flex items-start justify-between shadow-2xs active:scale-[0.98]"
+                  className="p-3.5 sm:p-4 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-2xl transition cursor-pointer group flex flex-col justify-between shadow-2xs active:scale-[0.99]"
                 >
-                  <div className="flex-1 min-w-0 pr-2">
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#78716C]">
-                      <span className="font-bold text-[#1C1917] px-1 py-0.2 bg-[#F5F4EE] rounded border border-[#E5E4DE]">
-                        {item.categoryLabel}
+                  <div>
+                    {/* Metadata */}
+                    <div className="flex items-center justify-between text-[10px] text-[#78716C] mb-2 font-mono pb-1.5 border-b border-[#F5F4EE]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="uppercase font-bold text-[#1C1917] bg-[#F5F4EE] px-1.5 py-0.5 rounded text-[9.5px]">
+                          {getCategoryBadgeLabel(item.category)}
+                        </span>
+                        {isBarOrHook && item.rhymeScheme && item.rhymeScheme !== 'Free' && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span>{item.rhymeScheme}</span>
+                          </>
+                        )}
+                        {isBarOrHook && item.syllableCount ? (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span>~{item.syllableCount} suku kata</span>
+                          </>
+                        ) : null}
+                      </div>
+
+                      {/* Date */}
+                      <span className="text-[9.5px] font-mono text-[#A8A29E]">
+                        {formattedDate}
                       </span>
-                      {item.tag && <span className="truncate">{item.tag}</span>}
                     </div>
-                    <div className="text-xs font-semibold text-[#1C1917] mt-1 leading-snug">
+
+                    {/* Main text content (max 4 lines) */}
+                    <div className="text-xs sm:text-sm text-[#1C1917] font-semibold leading-relaxed whitespace-pre-wrap pl-2.5 border-l-2 border-[#E5E4DE] group-hover:border-[#1C1917] line-clamp-4 overflow-hidden">
                       {item.text}
                     </div>
-                    {item.meaning && (
-                      <div className="text-[10.5px] text-[#78716C] mt-1 line-clamp-2 leading-relaxed bg-[#FAF9F5] p-1.5 rounded border border-[#E5E4DE]">
-                        <span className="font-semibold text-[#57534E] font-mono text-[9px] block">Makna:</span>
-                        {item.meaning}
+
+                    {/* Makna Section (khusus Diksi & Metafor) */}
+                    {isDiksiOrMetafor && item.meaning && (
+                      <div className="mt-2.5 p-2 bg-[#FAF9F5] rounded-xl text-xs text-[#57534E] leading-relaxed border border-[#E5E4DE]">
+                        <div className="text-[9.5px] uppercase font-mono font-bold text-[#78716C] mb-0.5 tracking-wider flex items-center gap-1">
+                          <BookOpen className="w-3 h-3 text-[#78716C]" />
+                          <span>Makna:</span>
+                        </div>
+                        <div className="whitespace-pre-wrap text-[11px] sm:text-xs text-[#44403C] line-clamp-3">
+                          {item.meaning}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#FAF9F5] group-hover:bg-[#1C1917] group-hover:text-[#FFFFFF] border border-[#E5E4DE] text-[#78716C] transition cursor-pointer shrink-0 mt-0.5">
-                    <Send className="w-3 h-3" />
+                  {/* Quick Action Footer */}
+                  <div className="flex items-center justify-end mt-2.5 pt-2 border-t border-[#F5F4EE]">
+                    <span className="text-[11px] font-semibold text-[#1C1917] group-hover:underline flex items-center gap-1">
+                      <Send className="w-3 h-3 text-[#57534E]" />
+                      <span>Sisipkan ke Lirik</span>
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })
           )}
         </div>
       </div>

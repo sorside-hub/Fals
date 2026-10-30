@@ -278,7 +278,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
                 onOpenWordBank();
               }}
               className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none"
-              title="Buka Amunisi & Gudang Kata"
+              title="Buka Amunisi"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
               <span>+ Amunisi</span>

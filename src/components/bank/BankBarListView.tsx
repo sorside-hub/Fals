@@ -104,6 +104,11 @@ export const BankBarListView: React.FC<BankBarListViewProps> = ({
           {filteredBars.map(bar => {
             const isBarOrHook = bar.category === 'bar' || bar.category === 'hook' || (bar.category as string) === 'punchline' || (bar.category as string) === 'rhyme';
             const isDiksiOrMetafor = bar.category === 'diksi' || bar.category === 'metafor' || (bar.category as string) === 'metaphor' || (bar.category as string) === 'idea';
+            const formattedDate = new Date(bar.createdAt || Date.now()).toLocaleDateString('id-ID', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            }).toUpperCase();
 
             return (
               <div
@@ -131,6 +136,11 @@ export const BankBarListView: React.FC<BankBarListViewProps> = ({
                         </>
                       ) : null}
                     </div>
+
+                    {/* Date */}
+                    <span className="text-[10px] font-mono text-[#A8A29E]">
+                      {formattedDate}
+                    </span>
                   </div>
 
                   {/* Main text content (max 4 lines) */}
