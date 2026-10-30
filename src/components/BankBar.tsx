@@ -5,7 +5,7 @@ import { BarEditorView } from './bank/BarEditorView';
 
 interface BankBarProps {
   barItems: BarItem[];
-  onAddBar: (bar: Omit<BarItem, 'id' | 'createdAt'>) => void;
+  onAddBar: (bar: Omit<BarItem, 'id' | 'createdAt'> & { id?: string; createdAt?: number }) => BarItem | void;
   onUpdateBar?: (bar: BarItem) => void;
   onDeleteBar: (id: string) => void;
   onSendToLyric?: (text: string) => void;
@@ -36,8 +36,9 @@ export const BankBar: React.FC<BankBarProps> = ({
         const blankBar: BarItem = {
           id: `bar-${Date.now()}`,
           text: '',
-          category: 'punchline',
-          rhymeScheme: 'AABB',
+          meaning: '',
+          category: 'diksi',
+          rhymeScheme: 'Free',
           syllableCount: 0,
           tags: [],
           createdAt: Date.now(),
@@ -73,8 +74,9 @@ export const BankBar: React.FC<BankBarProps> = ({
       const blankBar: BarItem = {
         id: `bar-${Date.now()}`,
         text: '',
-        category: 'punchline',
-        rhymeScheme: 'AABB',
+        meaning: '',
+        category: 'diksi',
+        rhymeScheme: 'Free',
         syllableCount: 0,
         tags: [],
         createdAt: Date.now(),
@@ -86,14 +88,24 @@ export const BankBar: React.FC<BankBarProps> = ({
 
   const handleSaveBar = (savedBar: BarItem) => {
     if (isCreatingNew) {
+      if (!savedBar.text.trim() && !savedBar.meaning?.trim()) {
+        return;
+      }
       onAddBar({
+        id: savedBar.id,
         text: savedBar.text,
+        meaning: savedBar.meaning,
         category: savedBar.category,
         rhymeScheme: savedBar.rhymeScheme,
         syllableCount: savedBar.syllableCount,
         tags: savedBar.tags,
+        createdAt: savedBar.createdAt || Date.now(),
       });
       setIsCreatingNew(false);
+      setEditingBar(savedBar);
+      if (onNavigateToEditor) {
+        onNavigateToEditor(savedBar.id);
+      }
     } else {
       if (onUpdateBar) {
         onUpdateBar(savedBar);
@@ -127,12 +139,14 @@ export const BankBar: React.FC<BankBarProps> = ({
 
   // Otherwise, show the gallery of bars
   return (
-    <BankBarListView
-      barItems={barItems}
-      onSelectBar={handleSelectBar}
-      onCreateNewBar={handleCreateNewBar}
-      onDeleteBar={onDeleteBar}
-      onSendToLyric={onSendToLyric}
-    />
+    <div className="max-w-5xl mx-auto">
+      <BankBarListView
+        barItems={barItems}
+        onSelectBar={handleSelectBar}
+        onCreateNewBar={handleCreateNewBar}
+        onDeleteBar={onDeleteBar}
+        onSendToLyric={onSendToLyric}
+      />
+    </div>
   );
 };

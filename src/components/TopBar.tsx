@@ -65,7 +65,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 : 'hover:text-[#1C1917]'
             }`}
           >
-            Bank Bar & Rima
+            Amunisi Lirik
           </button>
           <button
             onClick={() => onSelectTab('tools')}

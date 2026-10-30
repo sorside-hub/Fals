@@ -278,10 +278,10 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
                 onOpenWordBank();
               }}
               className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none"
-              title="Buka Word Bank (Bank Kata & Rima)"
+              title="Buka Amunisi & Gudang Kata"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
-              <span>+ Bank Kata</span>
+              <span>+ Amunisi</span>
             </button>
           )}
         </div>
@@ -382,7 +382,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
           </button>
         )}
 
-        {/* Word Bank Drawer Button for Mobile */}
+        {/* Amunisi Drawer Button for Mobile */}
         {onOpenWordBank && (
           <button
             type="button"
@@ -396,10 +396,10 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
               onOpenWordBank();
             }}
             className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#1C1917] px-2 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
-            title="Buka Word Bank"
+            title="Buka Amunisi"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
-            <span>+ Bank Kata</span>
+            <span>+ Amunisi</span>
           </button>
         )}
       </div>

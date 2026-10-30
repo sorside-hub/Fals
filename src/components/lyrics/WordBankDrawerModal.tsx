@@ -14,6 +14,7 @@ interface WordItem {
   category: 'bank' | 'rhyme' | 'diction' | 'phrase' | 'alliteration';
   categoryLabel: string;
   text: string;
+  meaning?: string;
   tag?: string;
 }
 
@@ -31,14 +32,14 @@ const DEFAULT_WORD_ITEMS: WordItem[] = [
   { id: 'r10', category: 'rhyme', categoryLabel: 'Rima -ih', text: 'jernih', tag: 'AABB' },
 
   // 2. DIKSI & SINONIM PUITIS
-  { id: 'd1', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'saujana', tag: 'Luas' },
-  { id: 'd2', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'kalbu', tag: 'Hati' },
-  { id: 'd3', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'relung', tag: 'Dalam' },
+  { id: 'd1', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'saujana', meaning: 'Sejauh mata memandang; luas membentang', tag: 'Luas' },
+  { id: 'd2', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'kalbu', meaning: 'Bagian terdalam batin manusia', tag: 'Hati' },
+  { id: 'd3', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'relung', meaning: 'Ruang terdalam yang tersembunyi', tag: 'Dalam' },
   { id: 'd4', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'laksana', tag: 'Seperti' },
   { id: 'd5', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'gelora', tag: 'Semangat' },
-  { id: 'd6', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'nestapa', tag: 'Duka' },
-  { id: 'd7', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'senandika', tag: 'Bicara Sendiri' },
-  { id: 'd8', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'anila', tag: 'Angin' },
+  { id: 'd6', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'nestapa', meaning: 'Duka nestapa yang mendalam', tag: 'Duka' },
+  { id: 'd7', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'senandika', meaning: 'Wacana seorang diri; bicara dalam hati', tag: 'Bicara Sendiri' },
+  { id: 'd8', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'anila', meaning: 'Angin sepoi yang berhembus', tag: 'Angin' },
   { id: 'd9', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'purnama', tag: 'Bulan' },
   { id: 'd10', category: 'diction', categoryLabel: 'Diksi Puitis', text: 'nirwana', tag: 'Surga' },
 
@@ -71,15 +72,16 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
   const isDraggingRef = useRef(false);
   const startYRef = useRef(0);
 
-  // Map user saved Bank Bar items from useBarBank
+  // Map user saved Amunisi items from useBarBank
   const userBankItems: WordItem[] = useMemo(() => {
     if (!barItems || barItems.length === 0) return [];
     return barItems.map((b) => ({
       id: `saved-${b.id}`,
       category: 'bank',
-      categoryLabel: `Bar ${b.category ? `(${b.category})` : 'Tersimpan'}`,
+      categoryLabel: b.category ? `Amunisi (${b.category})` : 'Amunisi Tersimpan',
       text: b.text,
-      tag: b.rhymeScheme || 'Bar',
+      meaning: b.meaning,
+      tag: b.rhymeScheme && b.rhymeScheme !== 'Free' ? b.rhymeScheme : (b.tags?.[0] || 'Amunisi'),
     }));
   }, [barItems]);
 
@@ -136,10 +138,12 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
 
   const filteredItems = allItems.filter((item) => {
     const matchCat = category === 'all' || item.category === category;
+    const q = search.toLowerCase();
     const matchSearch =
       search.trim() === '' ||
-      item.text.toLowerCase().includes(search.toLowerCase()) ||
-      item.categoryLabel.toLowerCase().includes(search.toLowerCase());
+      item.text.toLowerCase().includes(q) ||
+      (item.meaning && item.meaning.toLowerCase().includes(q)) ||
+      item.categoryLabel.toLowerCase().includes(q);
     return matchCat && matchSearch;
   });
 
@@ -175,9 +179,9 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
               <Sparkles className="w-4 h-4 text-[#1C1917]" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#1C1917]">Word Bank (Bank Kata & Bar)</h3>
+              <h3 className="text-sm font-bold text-[#1C1917]">Amunisi & Gudang Kata</h3>
               <p className="text-[11px] text-[#78716C]">
-                {userBankItems.length > 0 ? `${userBankItems.length} Bar Tersimpan · ` : ''}Rima, Diksi, Frasa & Aliterasi
+                {userBankItems.length > 0 ? `${userBankItems.length} Amunisi Tersimpan · ` : ''}Diksi, Metafor, Rima & Frasa
               </p>
             </div>
           </div>
@@ -198,7 +202,7 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari bar tersimpan, rima, atau diksi..."
+                placeholder="Cari amunisi tersimpan, makna, rima, atau diksi..."
                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-[#1C1917] outline-hidden focus:border-[#1C1917] placeholder:text-[#A8A29E]"
               />
             </div>
@@ -217,9 +221,9 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[11px] font-mono">
             {[
               { id: 'all', label: 'Semua' },
-              ...(userBankItems.length > 0 ? [{ id: 'bank', label: `Bar Tersimpan (${userBankItems.length})` }] : []),
+              ...(userBankItems.length > 0 ? [{ id: 'bank', label: `Amunisi (${userBankItems.length})` }] : []),
+              { id: 'diction', label: 'Diksi & Kata' },
               { id: 'rhyme', label: 'Rima Akhir' },
-              { id: 'diction', label: 'Diksi & Sinonim' },
               { id: 'phrase', label: 'Frasa Lirik' },
               { id: 'alliteration', label: 'Aliterasi' },
             ].map((tab) => (
@@ -260,7 +264,7 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
                 <div
                   key={item.id}
                   onClick={() => handleSelectWord(item.text)}
-                  className="p-2.5 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer group flex items-center justify-between shadow-2xs active:scale-[0.98]"
+                  className="p-2.5 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer group flex items-start justify-between shadow-2xs active:scale-[0.98]"
                 >
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#78716C]">
@@ -269,12 +273,18 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
                       </span>
                       {item.tag && <span className="truncate">{item.tag}</span>}
                     </div>
-                    <div className="text-xs font-semibold text-[#1C1917] mt-1 leading-snug truncate">
+                    <div className="text-xs font-semibold text-[#1C1917] mt-1 leading-snug">
                       {item.text}
                     </div>
+                    {item.meaning && (
+                      <div className="text-[10.5px] text-[#78716C] mt-1 line-clamp-2 leading-relaxed bg-[#FAF9F5] p-1.5 rounded border border-[#E5E4DE]">
+                        <span className="font-semibold text-[#57534E] font-mono text-[9px] block">Makna:</span>
+                        {item.meaning}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#FAF9F5] group-hover:bg-[#1C1917] group-hover:text-[#FFFFFF] border border-[#E5E4DE] text-[#78716C] transition cursor-pointer shrink-0">
+                  <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#FAF9F5] group-hover:bg-[#1C1917] group-hover:text-[#FFFFFF] border border-[#E5E4DE] text-[#78716C] transition cursor-pointer shrink-0 mt-0.5">
                     <Send className="w-3 h-3" />
                   </div>
                 </div>

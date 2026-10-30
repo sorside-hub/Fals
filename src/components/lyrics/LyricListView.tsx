@@ -106,7 +106,7 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
           <FileText className="w-4 h-4 text-[#1C1917]" />
           <span className="text-base font-bold text-[#1C1917] tracking-tight">Studio</span>
           <span className="text-xs font-mono font-medium text-[#78716C] px-2 py-0.5 rounded-full bg-[#F5F4EE] border border-[#E5E4DE]">
-            {songs.length} Proyek
+            ({songs.length})
           </span>
         </div>
 

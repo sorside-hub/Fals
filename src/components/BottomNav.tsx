@@ -16,7 +16,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const tabs: { id: TabType; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'learn', label: 'Teori', icon: BookOpen },
     { id: 'lyrics', label: 'Lirik', icon: PenLine },
-    { id: 'bank', label: 'Bank Bar', icon: Sparkles },
+    { id: 'bank', label: 'Amunisi', icon: Sparkles },
     { id: 'tools', label: 'Alat', icon: Sliders },
   ];
 

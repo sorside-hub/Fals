@@ -1,16 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { BarItem, BarCategory } from '../../types';
 import { countSyllablesInLine } from '../../utils/syllableCounter';
-import { BarWritingToolbar } from './BarWritingToolbar';
+import { CategoryPopover } from './CategoryPopover';
+import { RhymeSchemePopover } from './RhymeSchemePopover';
 import {
   ArrowLeft,
-  Save,
   Send,
   Copy,
   Check,
+  ChevronDown,
   Tag,
   Plus,
-  X
+  X,
+  BookOpen,
 } from 'lucide-react';
 
 interface BarEditorViewProps {
@@ -27,14 +29,23 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
   onSendToLyric,
 }) => {
   const [text, setText] = useState(bar.text);
-  const [category, setNewCategory] = useState<BarCategory>(bar.category);
-  const [rhymeScheme, setRhymeScheme] = useState<string>(bar.rhymeScheme || 'AABB');
+  const [meaning, setMeaning] = useState(bar.meaning || '');
+  const [category, setCategory] = useState<BarCategory>(() => {
+    const cat = bar.category || 'diksi';
+    if (cat === 'punchline' || cat === 'rhyme') return 'bar';
+    if (cat === 'idea' || (cat as string) === 'metaphor') return 'metafor';
+    return cat;
+  });
+  const [rhymeScheme, setRhymeScheme] = useState<string>(bar.rhymeScheme || 'Free');
   const [tags, setTags] = useState<string[]>(bar.tags || []);
   const [tagInput, setTagInput] = useState<string>('');
   const [isCopied, setIsCopied] = useState(false);
-  const [savedNotification, setSavedNotification] = useState(false);
 
-  // Line-by-line live syllable calculation
+  // Popover state
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isRhymeOpen, setIsRhymeOpen] = useState(false);
+
+  // Line-by-line syllable count for Bar & Hook
   const linesInfo = useMemo(() => {
     const rawLines = text.split('\n');
     return rawLines.map((line, idx) => {
@@ -52,6 +63,45 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
     return linesInfo.reduce((sum, l) => sum + l.syllables, 0);
   }, [linesInfo]);
 
+  // Autosave effect (debounced 350ms)
+  const isFirstRender = useRef(true);
+  const latestDataRef = useRef({ text, meaning, category, rhymeScheme, tags, totalSyllables });
+  latestDataRef.current = { text, meaning, category, rhymeScheme, tags, totalSyllables };
+
+  const triggerSave = () => {
+    const d = latestDataRef.current;
+    const updated: BarItem = {
+      ...bar,
+      text: d.text,
+      meaning: d.meaning,
+      category: d.category,
+      rhymeScheme: d.rhymeScheme,
+      syllableCount: d.totalSyllables,
+      tags: d.tags,
+    };
+    onSaveBar(updated);
+  };
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      triggerSave();
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [text, meaning, category, rhymeScheme, tags, totalSyllables]);
+
+  // Flush save on unmount
+  useEffect(() => {
+    return () => {
+      triggerSave();
+    };
+  }, []);
+
   const handleAddTag = () => {
     const trimmed = tagInput.trim().replace(/^#/, '');
     if (trimmed && !tags.includes(trimmed)) {
@@ -61,204 +111,239 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(t => t !== tagToRemove));
-  };
-
-  const handleSave = () => {
-    const updated: BarItem = {
-      ...bar,
-      text: text.trim(),
-      category,
-      rhymeScheme,
-      syllableCount: totalSyllables,
-      tags,
-    };
-    onSaveBar(updated);
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 2000);
+    setTags(tags.filter((t) => t !== tagToRemove));
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(text);
+    const copyContent =
+      (category === 'diksi' || category === 'metafor') && meaning.trim()
+        ? `${text.trim()}\n\nMakna:\n${meaning.trim()}`
+        : text.trim();
+    navigator.clipboard.writeText(copyContent);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 1500);
   };
 
   const handleSend = () => {
-    handleSave();
+    triggerSave();
     if (onSendToLyric) {
       onSendToLyric(text);
     }
   };
 
-  const handleDismissKeyboard = () => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
+  const getCategoryLabel = (cat: BarCategory) => {
+    switch (cat) {
+      case 'diksi':
+        return 'Diksi';
+      case 'metafor':
+        return 'Metafor';
+      case 'bar':
+        return 'Bar';
+      case 'hook':
+        return 'Hook';
+      default:
+        return 'Diksi';
     }
   };
 
+  const isBarOrHook = category === 'bar' || category === 'hook';
+
   return (
     <div className="w-full flex flex-col bg-[#FAF9F5] min-h-[calc(100vh-140px)] animate-fade-in">
-      {/* 1. Sticky Minimalist Context Header */}
-      <div className="sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] pb-3 pt-1">
-        <div className="flex flex-wrap items-center justify-between gap-3 py-1">
-          {/* Back button */}
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#1C1917] hover:bg-[#F5F4EE] px-2.5 py-1.5 rounded-lg border border-[#E5E4DE] transition cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 text-[#57534E]" />
-            <span>Kembali ke Bank Bar</span>
-          </button>
-
-          {/* Quick Controls */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Category selector */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-xs font-mono">
-              <span className="text-[#78716C]">Kategori:</span>
-              <select
-                value={category}
-                onChange={(e) => setNewCategory(e.target.value as BarCategory)}
-                className="bg-transparent font-semibold text-[#1C1917] outline-hidden cursor-pointer"
-              >
-                <option value="punchline">Punchline</option>
-                <option value="rhyme">Rima & Flow</option>
-                <option value="hook">Ide Hook / Chorus</option>
-                <option value="metaphor">Metafora & Kata</option>
-                <option value="idea">Catatan Konsep</option>
-              </select>
-            </div>
-
-            {/* Rhyme Scheme selector */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-xs font-mono">
-              <span className="text-[#78716C]">Rima:</span>
-              <select
-                value={rhymeScheme}
-                onChange={(e) => setRhymeScheme(e.target.value)}
-                className="bg-transparent font-semibold text-[#1C1917] outline-hidden cursor-pointer"
-              >
-                <option value="AABB">AABB</option>
-                <option value="ABAB">ABAB</option>
-                <option value="AAAA">AAAA</option>
-                <option value="Internal">Internal Rhyme</option>
-                <option value="Free">Free Flow</option>
-              </select>
-            </div>
-
-            {/* Syllable Counter Badge */}
-            <span className="text-xs font-mono text-[#78716C] px-1.5 py-0.5 rounded bg-[#F5F4EE] border border-[#E5E4DE]">
-              {totalSyllables} suku kata
-            </span>
-          </div>
-        </div>
-
-        {/* Action Buttons Strip */}
-        <div className="flex items-center justify-between gap-2 pt-2">
+      {/* 1. Header Toolbar */}
+      <div className="sticky top-0 z-30 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] py-2 px-1 mb-2">
+        <div className="flex items-center justify-between gap-2">
+          {/* Left Controls */}
           <div className="flex items-center gap-2">
+            {/* Back button: Icon only, hidden on mobile */}
             <button
+              type="button"
+              onClick={() => {
+                triggerSave();
+                onBack();
+              }}
+              className="hidden sm:flex items-center justify-center w-8 h-8 rounded-lg border border-[#E5E4DE] bg-[#FFFFFF] hover:bg-[#F5F4EE] transition cursor-pointer text-[#57534E] shadow-2xs"
+              title="Kembali ke Amunisi"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+
+            {/* Custom Category Popover Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCategoryOpen(!isCategoryOpen);
+                  setIsRhymeOpen(false);
+                }}
+                className="h-8 flex items-center gap-1.5 px-2.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-semibold text-[#1C1917] cursor-pointer shadow-2xs transition"
+              >
+                <span className="text-[#78716C] font-normal">Kategori:</span>
+                <span>{getCategoryLabel(category)}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#78716C]" />
+              </button>
+
+              <CategoryPopover
+                isOpen={isCategoryOpen}
+                onClose={() => setIsCategoryOpen(false)}
+                currentCategory={category}
+                onSelectCategory={(newCat) => setCategory(newCat)}
+                align="left"
+              />
+            </div>
+
+            {/* Custom Rhyme Popover Dropdown: ONLY for bar & hook */}
+            {isBarOrHook && (
+              <div className="relative animate-fade-in">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRhymeOpen(!isRhymeOpen);
+                    setIsCategoryOpen(false);
+                  }}
+                  className="h-8 flex items-center gap-1.5 px-2.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-semibold text-[#1C1917] cursor-pointer shadow-2xs transition"
+                >
+                  <span className="text-[#78716C] font-normal">Rima:</span>
+                  <span>{rhymeScheme || 'Free'}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-[#78716C]" />
+                </button>
+
+                <RhymeSchemePopover
+                  isOpen={isRhymeOpen}
+                  onClose={() => setIsRhymeOpen(false)}
+                  currentScheme={rhymeScheme}
+                  onSelectScheme={(newScheme) => setRhymeScheme(newScheme)}
+                  align="left"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-2">
+            {/* Copy Button: Icon only */}
+            <button
+              type="button"
               onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#1C1917] bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer"
+              className="w-8 h-8 flex items-center justify-center bg-[#FFFFFF] hover:bg-[#F5F4EE] text-[#1C1917] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs"
+              title="Salin Amunisi"
             >
               {isCopied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-emerald-600 font-semibold">Tersalin</span>
-                </>
+                <Check className="w-4 h-4 text-emerald-600" />
               ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 text-[#57534E]" />
-                  <span>Salin Bar</span>
-                </>
+                <Copy className="w-4 h-4 text-[#57534E]" />
               )}
             </button>
 
-            {savedNotification && (
-              <span className="text-xs font-mono text-emerald-600 font-semibold animate-fade-in">
-                ✓ Tersimpan
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
+            {/* Send to Lyric: Icon only */}
             {onSendToLyric && (
               <button
+                type="button"
                 onClick={handleSend}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] text-[#1C1917] border border-[#E5E4DE] rounded-lg text-xs font-medium transition cursor-pointer"
+                className="w-8 h-8 flex items-center justify-center bg-[#FFFFFF] hover:bg-[#F5F4EE] text-[#1C1917] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs"
+                title="Kirim ke Lirik"
               >
-                <Send className="w-3.5 h-3.5 text-[#57534E]" />
-                <span className="hidden sm:inline">Kirim ke Lirik</span>
+                <Send className="w-4 h-4 text-[#57534E]" />
               </button>
             )}
-
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1C1917] hover:bg-[#292524] text-[#FAF9F5] rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Simpan Bar</span>
-            </button>
           </div>
         </div>
       </div>
 
-      {/* 2. Self-Contained Modular Toolbar (Desktop sticky strip + Mobile docked keyboard accessory) */}
-      <BarWritingToolbar
-        variant="auto"
-        rhymeScheme={rhymeScheme}
-        onSelectRhymeScheme={setRhymeScheme}
-        onDismissKeyboard={handleDismissKeyboard}
-      />
-
-      {/* 3. Full-Screen Writing Canvas */}
-      <div className="relative flex flex-1 w-full min-h-[480px] bg-[#FAF9F5] paper-pattern mt-1">
-        {/* Left Column: Line Numbers & Live Syllable Count */}
-        <div className="w-12 sm:w-16 shrink-0 py-3 select-none border-r border-[#E5E4DE]/60 bg-[#FAF9F5] font-mono text-[11px] text-[#A8A29E] flex flex-col items-center leading-[2.5rem]">
-          {linesInfo.map((l) => (
-            <div key={l.lineNum} className="h-[2.5rem] flex items-center justify-between w-full px-1.5 sm:px-2">
-              <span className="text-[10px] text-[#A8A29E]">{l.lineNum}</span>
-              {l.syllables > 0 ? (
-                <span
-                  className="text-[10px] font-medium px-1 rounded bg-[#EAE8DF] text-[#44403C]"
-                  title={`${l.syllables} suku kata`}
+      {/* 2. Editor Canvas */}
+      <div className="relative flex flex-col w-full bg-[#FAF9F5] paper-pattern rounded-2xl border border-[#E5E4DE] overflow-hidden shadow-2xs">
+        {/* CASE A: Category is 'bar' or 'hook' -> Match lyric editor (gutter line numbers + live syllable count, NO makna) */}
+        {isBarOrHook ? (
+          <div className="flex w-full min-h-[300px] sm:min-h-[360px]">
+            {/* Left Gutter: Live Syllable Count */}
+            <div className="w-7 sm:w-8 shrink-0 py-3 select-none border-r border-[#E5E4DE]/60 bg-[#FAF9F5] font-mono text-[11px] text-[#A8A29E] flex flex-col items-center">
+              {linesInfo.map((l) => (
+                <div
+                  key={l.lineNum}
+                  className="h-[1.6rem] flex items-center justify-center w-full px-1"
                 >
-                  {l.syllables}k
-                </span>
-              ) : null}
+                  {l.syllables > 0 ? (
+                    <span
+                      className="text-[10px] font-mono font-medium text-[#78716C] px-1 rounded bg-[#EAE8DF]"
+                      title={`${l.syllables} suku kata`}
+                    >
+                      {l.syllables}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Textarea matching line-height with left column, full width */}
-        <div className="flex-1 py-3 px-2 sm:px-6 md:px-8">
-          <textarea
-            rows={Math.max(10, linesInfo.length + 2)}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Tulis baris kata, rima, atau punchline di sini...&#10;Setiap baris baru akan dihitung suku katanya di margin kiri secara otomatis."
-            className="w-full h-full bg-transparent border-none outline-hidden text-[#1C1917] text-[16px] sm:text-[17px] leading-[2.5rem] resize-none font-normal placeholder:text-[#A8A29E]"
-            autoFocus
-          />
-        </div>
+            {/* Main Textarea matching line-height exactly */}
+            <div className="flex-1 py-3 px-3 sm:px-4">
+              <textarea
+                rows={Math.max(8, linesInfo.length + 1)}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Tulis baris lirik, punchline, atau rima hook di sini...&#10;Tekan Enter untuk baris baru."
+                className="w-full h-full bg-transparent border-none outline-hidden text-[#1C1917] text-[14.5px] sm:text-[15.5px] leading-[1.6rem] resize-none font-normal placeholder:text-[#A8A29E]"
+              />
+            </div>
+          </div>
+        ) : (
+          /* CASE B: Category is 'diksi' or 'metafor' -> No syllable gutter, has dedicated Makna field */
+          <div className="flex flex-col w-full">
+            {/* Main Word / Metaphor Input */}
+            <div className="p-4 sm:p-5 min-h-[140px] sm:min-h-[160px]">
+              <textarea
+                rows={4}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={
+                  category === 'diksi'
+                    ? "Tulis kata, istilah, atau diksi puitis di sini...&#10;Contoh: 'Aporia' atau 'Saujana'"
+                    : "Tulis metafor, majas, atau kiasan rasa di sini...&#10;Contoh: 'Jendela berembun menatap sepi'"
+                }
+                className="w-full h-full bg-transparent border-none outline-hidden text-[#1C1917] text-[16px] sm:text-[18px] leading-relaxed resize-none font-semibold placeholder:font-normal placeholder:text-[#A8A29E]"
+              />
+            </div>
+
+            {/* Dedicated Makna Section */}
+            <div className="border-t border-[#E5E4DE] bg-[#FFFFFF] p-4 sm:p-5 space-y-2">
+              <label className="text-xs font-bold text-[#1C1917] flex items-center gap-1.5 font-mono">
+                <BookOpen className="w-3.5 h-3.5 text-[#57534E]" />
+                <span>Makna</span>
+              </label>
+              <textarea
+                rows={3}
+                value={meaning}
+                onChange={(e) => setMeaning(e.target.value)}
+                placeholder={
+                  category === 'diksi'
+                    ? 'Tulis makna, arti istilah, atau nuansa rasa dari kata ini...'
+                    : 'Tulis maksud metafor, analogi simbolis, atau konteks suasana di sini...'
+                }
+                className="w-full text-xs sm:text-sm text-[#1C1917] bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl p-3 focus:bg-[#FFFFFF] focus:border-[#1C1917] outline-hidden resize-none transition leading-relaxed placeholder:text-[#A8A29E]"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 4. Integrated Tags Section */}
-      <div className="py-3 border-t border-[#E5E4DE]/70 space-y-2">
+      {/* 3. Integrated Tags Section */}
+      <div className="py-3 px-1 space-y-2 mt-2">
         <div className="flex items-center justify-between text-xs font-semibold text-[#78716C]">
           <span className="flex items-center gap-1.5 uppercase font-mono text-[11px]">
             <Tag className="w-3.5 h-3.5" />
-            <span>Label & Tagging Bar</span>
+            <span>Label & Tag Amunisi</span>
           </span>
           <span className="text-[11px] font-mono">{tags.length} tag</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          {tags.map(t => (
+          {tags.map((t) => (
             <span
               key={t}
-              className="flex items-center gap-1 text-xs font-mono bg-[#FFFFFF] border border-[#E5E4DE] text-[#1C1917] px-2.5 py-1 rounded-lg"
+              className="flex items-center gap-1 text-xs font-mono bg-[#FFFFFF] border border-[#E5E4DE] text-[#1C1917] px-2.5 py-1 rounded-lg shadow-2xs"
             >
               <span>#{t}</span>
               <button
+                type="button"
                 onClick={() => handleRemoveTag(t)}
                 className="hover:text-rose-600 transition cursor-pointer"
               >
@@ -275,12 +360,13 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
               placeholder="Tambah tag..."
-              className="w-24 sm:w-32 px-2.5 py-1 text-xs bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg outline-hidden text-[#1C1917] focus:border-[#1C1917]"
+              className="w-24 sm:w-32 px-2.5 py-1 text-xs bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg outline-hidden text-[#1C1917] focus:border-[#1C1917] shadow-2xs"
             />
             <button
               type="button"
               onClick={handleAddTag}
-              className="p-1 rounded bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] text-[#1C1917] cursor-pointer"
+              className="p-1 rounded bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] text-[#1C1917] cursor-pointer shadow-2xs"
+              title="Tambah Tag"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>

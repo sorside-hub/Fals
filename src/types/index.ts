@@ -139,13 +139,14 @@ export interface SongDraft {
   tags?: string[];
 }
 
-export type BarCategory = 'punchline' | 'rhyme' | 'hook' | 'metaphor' | 'idea';
+export type BarCategory = 'diksi' | 'metafor' | 'bar' | 'hook' | 'punchline' | 'rhyme' | 'idea';
 
 export interface BarItem {
   id: string;
   text: string;
+  meaning?: string; // Makna / maksud filosofis / konteks suasana
   category: BarCategory;
-  rhymeScheme?: string; // e.g. "AABB", "ABAB", "Internal"
+  rhymeScheme?: string; // e.g. "AABB", "ABAB", "Internal", "Free"
   syllableCount?: number;
   tags: string[];
   createdAt: number;
