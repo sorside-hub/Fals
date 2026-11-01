@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Volume2, Check, Plus, X, Music, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, Volume2, Check, Plus, X, Undo2, Redo2 } from 'lucide-react';
 import { sound } from '../../utils/audioEngine';
 import { useVirtualKeyboard } from '../../hooks/useVirtualKeyboard';
 
@@ -78,6 +78,10 @@ export interface LyricWritingToolbarProps {
   onOpenChordDrawer?: () => void;
   onOpenWordBank?: () => void;
   onDismissKeyboard?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   variant?: 'auto' | 'desktop' | 'mobile';
   keyboardOffset?: number;
 }
@@ -92,6 +96,10 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
   onOpenChordDrawer,
   onOpenWordBank,
   onDismissKeyboard,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
   variant = 'auto',
   keyboardOffset: customKeyboardOffset,
 }) => {
@@ -201,8 +209,47 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
   const renderDesktopStrip = () => (
     <div className="w-full flex flex-col border-b border-[#F0EFEA] animate-fade-in">
       <div className="py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-        {/* Section Insertion: Single "+ Bagian" Dropdown */}
+        {/* Left Section: Undo/Redo & "+ Bagian" Dropdown */}
         <div className="flex items-center gap-2">
+          {/* Pojok Kiri: Undo & Redo */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={!canUndo}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (canUndo && onUndo) onUndo();
+              }}
+              className={`w-7 h-7 flex items-center justify-center rounded-md border border-[#D6D3D1] bg-[#FFFFFF] transition shadow-2xs select-none ${
+                canUndo
+                  ? 'text-[#1C1917] hover:bg-[#F5F4EE] hover:border-[#1C1917] cursor-pointer'
+                  : 'text-[#A8A29E] opacity-35 cursor-not-allowed'
+              }`}
+              title="Urungkan (Undo)"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              disabled={!canRedo}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (canRedo && onRedo) onRedo();
+              }}
+              className={`w-7 h-7 flex items-center justify-center rounded-md border border-[#D6D3D1] bg-[#FFFFFF] transition shadow-2xs select-none ${
+                canRedo
+                  ? 'text-[#1C1917] hover:bg-[#F5F4EE] hover:border-[#1C1917] cursor-pointer'
+                  : 'text-[#A8A29E] opacity-35 cursor-not-allowed'
+              }`}
+              title="Ulangi (Redo)"
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <span className="w-px h-4 bg-[#E5E4DE] mx-0.5 shrink-0" />
+
           <span className="text-[#78716C] font-mono text-[11px] shrink-0">Bagian:</span>
           
           <div ref={desktopSectionRef} className="relative">
@@ -215,7 +262,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
               className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none"
             >
               <Plus className="w-3.5 h-3.5 text-[#57534E]" />
-              <span>+ Bagian</span>
+              <span>Bagian</span>
               <ChevronDown className={`w-3.5 h-3.5 text-[#78716C] transition-transform duration-200 ${showSectionDropdownDesktop ? 'rotate-180' : ''}`} />
             </button>
 
@@ -264,8 +311,8 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
               className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none"
               title="Buka Drawer Harmoni & Family Chord"
             >
-              <Music className="w-3.5 h-3.5 text-[#57534E]" />
-              <span>+ Akor ({activeKey})</span>
+              <Plus className="w-3.5 h-3.5 text-[#57534E]" />
+              <span>Akor ({activeKey})</span>
             </button>
           )}
 
@@ -280,8 +327,8 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
               className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#1C1917] px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] hover:bg-[#F5F4EE] hover:border-[#1C1917] transition cursor-pointer shadow-2xs select-none"
               title="Buka Amunisi"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
-              <span>+ Amunisi</span>
+              <Plus className="w-3.5 h-3.5 text-[#57534E]" />
+              <span>Amunisi</span>
             </button>
           )}
         </div>
@@ -298,6 +345,45 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
       className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2.5 py-1.5 flex items-center justify-between gap-2 animate-fade-in"
     >
       <div className="flex items-center gap-1.5">
+        {/* Pojok Kiri: Undo & Redo for Mobile */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            disabled={!canUndo}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              if (canUndo && onUndo) onUndo();
+            }}
+            className={`w-7 h-7 flex items-center justify-center rounded-md border border-[#D6D3D1] bg-[#FFFFFF] transition shadow-2xs select-none ${
+              canUndo
+                ? 'text-[#1C1917] active:bg-[#EAE8DF] cursor-pointer'
+                : 'text-[#A8A29E] opacity-35 cursor-not-allowed'
+            }`}
+            title="Urungkan (Undo)"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            type="button"
+            disabled={!canRedo}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              if (canRedo && onRedo) onRedo();
+            }}
+            className={`w-7 h-7 flex items-center justify-center rounded-md border border-[#D6D3D1] bg-[#FFFFFF] transition shadow-2xs select-none ${
+              canRedo
+                ? 'text-[#1C1917] active:bg-[#EAE8DF] cursor-pointer'
+                : 'text-[#A8A29E] opacity-35 cursor-not-allowed'
+            }`}
+            title="Ulangi (Redo)"
+          >
+            <Redo2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <span className="w-px h-4 bg-[#E5E4DE] mx-0.5 shrink-0" />
+
         {/* Pinned Single Section Dropdown Button (Outside scroll container to avoid clipping and keep keyboard open) */}
         <div ref={mobileSectionRef} className="relative shrink-0">
           <button
@@ -359,8 +445,6 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
           )}
         </div>
 
-        <span className="w-px h-5 bg-[#E5E4DE] mx-0.5 shrink-0" />
-
         {/* Single Chord Drawer Button for Mobile */}
         {onOpenChordDrawer && (
           <button
@@ -377,8 +461,8 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
             className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#1C1917] px-2 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
             title="Buka Drawer Akor"
           >
-            <Music className="w-3.5 h-3.5 text-[#57534E]" />
-            <span>+ Akor ({activeKey})</span>
+            <Plus className="w-3.5 h-3.5 text-[#57534E]" />
+            <span>Akor ({activeKey})</span>
           </button>
         )}
 
@@ -398,8 +482,8 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
             className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#1C1917] px-2 py-1.5 rounded-md bg-[#FFFFFF] border border-[#D6D3D1] active:bg-[#EAE8DF] shadow-2xs shrink-0 select-none cursor-pointer"
             title="Buka Amunisi"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#57534E]" />
-            <span>+ Amunisi</span>
+            <Plus className="w-3.5 h-3.5 text-[#57534E]" />
+            <span>Amunisi</span>
           </button>
         )}
       </div>

@@ -19,7 +19,8 @@ export function parseHash(hashStr: string): ParsedRoute {
 
   let tab: TabType = 'learn';
   if (rawTab === 'lyrics' || rawTab === 'lirik') tab = 'lyrics';
-  else if (rawTab === 'bank') tab = 'bank';
+  else if (rawTab === 'bank' || rawTab === 'amunisi') tab = 'bank';
+  else if (rawTab === 'scale' || rawTab === 'skala') tab = 'scale';
   else if (rawTab === 'tools' || rawTab === 'alat') tab = 'tools';
   else tab = 'learn';
 

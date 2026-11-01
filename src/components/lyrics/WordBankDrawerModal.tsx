@@ -289,11 +289,24 @@ export const WordBankDrawerModal: React.FC<WordBankDrawerModalProps> = ({
                     )}
                   </div>
 
-                  {/* Quick Action Footer */}
-                  <div className="flex items-center justify-end mt-2.5 pt-2 border-t border-[#F5F4EE]">
-                    <span className="text-[11px] font-semibold text-[#1C1917] group-hover:underline flex items-center gap-1">
+                  {/* Footer Row: Tags on Left, Minimalist "Sisipkan" on Right */}
+                  <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-[#F5F4EE]">
+                    <div className="flex flex-wrap items-center gap-1 min-w-0">
+                      {item.tags && item.tags.length > 0 ? (
+                        item.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="text-[9.5px] font-mono text-[#78716C] bg-[#FAF9F5] px-1.5 py-0.5 rounded border border-[#E5E4DE]"
+                          >
+                            #{t}
+                          </span>
+                        ))
+                      ) : null}
+                    </div>
+
+                    <span className="text-[11px] font-semibold text-[#1C1917] group-hover:underline flex items-center gap-1 shrink-0 ml-auto">
                       <Send className="w-3 h-3 text-[#57534E]" />
-                      <span>Sisipkan ke Lirik</span>
+                      <span>Sisipkan</span>
                     </span>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
@@ -238,6 +238,38 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       if (onClearInsertedBar) onClearInsertedBar();
     }
   }, [insertedBarText, editor, onClearInsertedBar]);
+
+  // Undo & Redo History State for TipTap Editor
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateHistory = () => {
+      setCanUndo(editor.can().undo());
+      setCanRedo(editor.can().redo());
+    };
+
+    editor.on('transaction', updateHistory);
+    updateHistory();
+
+    return () => {
+      editor.off('transaction', updateHistory);
+    };
+  }, [editor]);
+
+  const handleUndo = useCallback(() => {
+    if (editor) {
+      editor.chain().focus().undo().run();
+    }
+  }, [editor]);
+
+  const handleRedo = useCallback(() => {
+    if (editor) {
+      editor.chain().focus().redo().run();
+    }
+  }, [editor]);
 
   // Sync title and metadata changes
   const handleTitleChange = (val: string) => {
@@ -640,6 +672,10 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         onOpenChordDrawer={() => setIsChordDrawerOpen(true)}
         onOpenWordBank={() => setIsWordBankOpen(true)}
         onDismissKeyboard={handleDismissKeyboard}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
 
       {/* 3. Main Full-Screen Writing Canvas */}

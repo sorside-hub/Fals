@@ -7,6 +7,7 @@ import { LyricEditor } from './components/LyricEditor';
 import { ConceptEditor } from './components/lyrics/ConceptEditor';
 import { AlbumProjectView } from './components/lyrics/AlbumProjectView';
 import { BankBar } from './components/BankBar';
+import { ScaleLabView } from './components/scale/ScaleLabView';
 import { ToolsView } from './components/ToolsView';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { useSongs } from './hooks/useSongs';
@@ -360,6 +361,13 @@ export default function App() {
                 navigate('#bank');
               }}
             />
+          </div>
+        )}
+
+        {/* Tab Skala (Scale Lab) */}
+        {route.tab === 'scale' && (
+          <div className="animate-fade-in max-w-5xl mx-auto">
+            <ScaleLabView onSendToLyric={handleSendToLyric} />
           </div>
         )}
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BarItem, BarCategory } from '../../types';
-import { Plus, Send, Copy, Trash2, Check, Sparkles, BookOpen, AlertTriangle } from 'lucide-react';
+import { Plus, Send, Copy, Trash2, Check, Sparkles, BookOpen, AlertTriangle, Search } from 'lucide-react';
 
 interface BankBarListViewProps {
   barItems: BarItem[];
@@ -18,6 +18,7 @@ export const BankBarListView: React.FC<BankBarListViewProps> = ({
   onSendToLyric,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [search, setSearch] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [itemToDelete, setItemToDelete] = useState<BarItem | null>(null);
 
@@ -29,15 +30,30 @@ export const BankBarListView: React.FC<BankBarListViewProps> = ({
     { key: 'hook', label: 'Hook' },
   ];
 
-  const filteredBars = selectedCategory === 'all'
-    ? barItems
-    : barItems.filter(b => {
-        if (selectedCategory === 'diksi') return b.category === 'diksi';
-        if (selectedCategory === 'metafor') return b.category === 'metafor' || (b.category as string) === 'metaphor';
-        if (selectedCategory === 'bar') return b.category === 'bar' || b.category === 'punchline' || b.category === 'rhyme';
-        if (selectedCategory === 'hook') return b.category === 'hook';
-        return b.category === selectedCategory;
-      });
+  const filteredBars = barItems.filter(b => {
+    let matchCat = selectedCategory === 'all';
+    if (!matchCat) {
+      if (selectedCategory === 'diksi') matchCat = b.category === 'diksi';
+      else if (selectedCategory === 'metafor') {
+        matchCat = b.category === 'metafor' || (b.category as string) === 'metaphor' || (b.category as string) === 'idea';
+      } else if (selectedCategory === 'bar') {
+        matchCat = b.category === 'bar' || (b.category as string) === 'punchline' || (b.category as string) === 'rhyme';
+      } else if (selectedCategory === 'hook') {
+        matchCat = b.category === 'hook';
+      } else {
+        matchCat = b.category === selectedCategory;
+      }
+    }
+
+    const q = search.toLowerCase().trim();
+    const matchSearch =
+      q === '' ||
+      b.text.toLowerCase().includes(q) ||
+      (b.meaning && b.meaning.toLowerCase().includes(q)) ||
+      b.tags?.some(t => t.toLowerCase().includes(q));
+
+    return matchCat && matchSearch;
+  });
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -74,7 +90,7 @@ export const BankBarListView: React.FC<BankBarListViewProps> = ({
         </button>
       </div>
 
-      {/* Category Filter Tabs (Centered) */}
+      {/* Category Filter Tabs & Search Bar (Centered, matching Lyric tab) */}
       <div className="flex flex-col items-center gap-2.5">
         <div className="inline-flex items-center gap-1 p-1 bg-[#F5F4EE] border border-[#E5E4DE] rounded-xl overflow-x-auto scrollbar-none text-xs">
           {categories.map(cat => (
@@ -91,13 +107,31 @@ export const BankBarListView: React.FC<BankBarListViewProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Search Bar matching LyricListView */}
+        <div className="relative w-full max-w-sm">
+          <Search className="w-3.5 h-3.5 text-[#78716C] absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari kata, metafor, makna, atau bar..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#FFFFFF] border border-[#E5E4DE] rounded-xl text-[#1C1917] outline-hidden focus:border-[#1C1917] shadow-2xs"
+          />
+        </div>
       </div>
 
       {/* Bank Bar Items Grid */}
       {filteredBars.length === 0 ? (
         <div className="p-8 text-center bg-[#FFFFFF] border border-[#E5E4DE] rounded-2xl text-[#78716C] space-y-2">
-          <p className="text-sm font-semibold text-[#1C1917]">Belum ada amunisi di kategori ini</p>
-          <p className="text-xs">Klik tombol "Amunisi Baru" untuk menambah kata, metafor, atau bar.</p>
+          <p className="text-sm font-semibold text-[#1C1917]">
+            {search.trim() ? 'Tidak ada amunisi yang cocok' : 'Belum ada amunisi di kategori ini'}
+          </p>
+          <p className="text-xs">
+            {search.trim()
+              ? `Tidak ditemukan amunisi dengan kata kunci "${search.trim()}".`
+              : 'Klik tombol "Amunisi Baru" untuk menambah kata, metafor, atau bar.'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
