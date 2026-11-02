@@ -1,4 +1,4 @@
-export type TabType = 'learn' | 'lyrics' | 'bank' | 'scale' | 'tools';
+export type TabType = 'lyrics' | 'bank';
 
 export interface NoteInfo {
   name: string;

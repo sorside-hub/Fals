@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { TabType, SongDraft, ProjectType, SongStatus } from './types';
 import { BottomNav } from './components/BottomNav';
-import { TheoryLearnView } from './components/TheoryLearnView';
 import { LyricListView } from './components/lyrics/LyricListView';
 import { LyricEditor } from './components/LyricEditor';
 import { ConceptEditor } from './components/lyrics/ConceptEditor';
 import { AlbumProjectView } from './components/lyrics/AlbumProjectView';
 import { BankBar } from './components/BankBar';
-import { ScaleLabView } from './components/scale/ScaleLabView';
-import { ToolsView } from './components/ToolsView';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { useSongs } from './hooks/useSongs';
 import { useBarBank } from './hooks/useBarBank';
@@ -139,8 +136,6 @@ export default function App() {
           navigate('#bank');
         }
       }
-    } else {
-      navigate(`#${tab}`);
     }
   };
 
@@ -225,7 +220,6 @@ export default function App() {
   const isLyricEditorOpen = route.tab === 'lyrics' && route.subView === 'editor';
   const isLyricConceptOpen = route.tab === 'lyrics' && route.subView === 'concept';
   const isAlbumOpen = route.tab === 'lyrics' && route.subView === 'album';
-  const isTheoryDeepDiveOpen = route.tab === 'learn' && route.subView === 'deep';
   const isBarEditorOpen = route.tab === 'bank' && route.subView === 'editor';
   const isFullScreenEditor = isLyricEditorOpen || isLyricConceptOpen || isBarEditorOpen;
 
@@ -250,18 +244,6 @@ export default function App() {
             : 'max-w-7xl px-3 sm:px-6 md:px-8 pt-3 sm:pt-6'
         }`}
       >
-        {/* Tab Teori */}
-        {route.tab === 'learn' && (
-          <div className="animate-fade-in">
-            <TheoryLearnView
-              initialThemeId={route.id}
-              isDeepDive={isTheoryDeepDiveOpen}
-              onNavigateToDeepDive={(themeId) => navigate(`#learn/deep/${themeId}`)}
-              onBackFromDeepDive={goBack}
-            />
-          </div>
-        )}
-
         {/* Tab Lirik: Multi-View (List View ➔ Album View ➔ Full Bleed Canvas Editor / Concept Editor) */}
         {route.tab === 'lyrics' && (
           <div className="animate-fade-in w-full">
@@ -361,20 +343,6 @@ export default function App() {
                 navigate('#bank');
               }}
             />
-          </div>
-        )}
-
-        {/* Tab Skala (Scale Lab) */}
-        {route.tab === 'scale' && (
-          <div className="animate-fade-in max-w-5xl mx-auto">
-            <ScaleLabView onSendToLyric={handleSendToLyric} />
-          </div>
-        )}
-
-        {/* Tab Tools */}
-        {route.tab === 'tools' && (
-          <div className="animate-fade-in max-w-5xl mx-auto">
-            <ToolsView />
           </div>
         )}
       </main>

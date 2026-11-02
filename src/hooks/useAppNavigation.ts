@@ -11,18 +11,18 @@ export interface ParsedRoute {
 export function parseHash(hashStr: string): ParsedRoute {
   const clean = hashStr.replace(/^#\/?/, '').trim();
   if (!clean) {
-    return { rawHash: '#learn', tab: 'learn', subView: null, id: null };
+    return { rawHash: '#lyrics', tab: 'lyrics', subView: null, id: null };
   }
 
   const parts = clean.split('/');
   const rawTab = parts[0]?.toLowerCase();
 
-  let tab: TabType = 'learn';
-  if (rawTab === 'lyrics' || rawTab === 'lirik') tab = 'lyrics';
-  else if (rawTab === 'bank' || rawTab === 'amunisi') tab = 'bank';
-  else if (rawTab === 'scale' || rawTab === 'skala') tab = 'scale';
-  else if (rawTab === 'tools' || rawTab === 'alat') tab = 'tools';
-  else tab = 'learn';
+  let tab: TabType = 'lyrics';
+  if (rawTab === 'bank' || rawTab === 'amunisi') {
+    tab = 'bank';
+  } else {
+    tab = 'lyrics';
+  }
 
   const subView = (parts[1] === 'editor' || parts[1] === 'deep' || parts[1] === 'concept' || parts[1] === 'album')
     ? (parts[1] as 'editor' | 'deep' | 'concept' | 'album')
@@ -42,7 +42,7 @@ export function useAppNavigation() {
     if (typeof window !== 'undefined') {
       return parseHash(window.location.hash);
     }
-    return { rawHash: '#learn', tab: 'learn', subView: null, id: null };
+    return { rawHash: '#lyrics', tab: 'lyrics', subView: null, id: null };
   });
 
   // Scroll retention memory map
@@ -52,7 +52,7 @@ export function useAppNavigation() {
   // Helper to save current scroll position for the active hash
   const saveCurrentScroll = useCallback(() => {
     if (typeof window !== 'undefined') {
-      const currentHash = window.location.hash || '#learn';
+      const currentHash = window.location.hash || '#lyrics';
       scrollMemoryRef.current[currentHash] = window.scrollY;
     }
   }, []);
@@ -77,15 +77,8 @@ export function useAppNavigation() {
     const handlePopState = (e: PopStateEvent) => {
       saveCurrentScroll();
 
-      const newHash = window.location.hash || '#learn';
+      const newHash = window.location.hash || '#lyrics';
       const parsed = parseHash(newHash);
-
-      // Check if user is navigating back from a non-learn root tab
-      // When at #lyrics, #bank, or #tools with no previous history in stack,
-      // return to #learn instead of exiting
-      if (!parsed.subView && parsed.tab !== 'learn' && (!e.state || !e.state.tab)) {
-        // Safe redirect to main theory tab
-      }
 
       setRoute(parsed);
       lastHashRef.current = newHash;
@@ -141,8 +134,8 @@ export function useAppNavigation() {
       // Fallback: If no previous history entry in current tab
       if (route.subView) {
         navigate(`#${route.tab}`);
-      } else if (route.tab !== 'learn') {
-        navigate('#learn');
+      } else if (route.tab !== 'lyrics') {
+        navigate('#lyrics');
       }
     }
   }, [route, saveCurrentScroll, navigate]);

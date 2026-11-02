@@ -4,5 +4,4 @@
 export * from '../data/constants';
 export * from '../data/chordFormulas';
 export * from '../data/scales';
-export * from '../data/themes';
 export * from './musicCalculations';

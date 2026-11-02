@@ -1,46 +1,21 @@
-# Rencana Kerja: Tahap 2 - Sistem Versi Lirik (Multi-Version Lyric Drafting)
+# Implementation Plan - Scale Lab & Pola Pattern Optimizer
 
-## Ringkasan Konsep & Sistem
-Menambahkan fitur **Versi Lirik** pada setiap proyek lagu. Penulis lagu dapat membuat beberapa variasi/draf lirik (misal: *Versi 1 - Draf Awal*, *Versi 2 - Reff Alternatif*, *Versi 3 - Final*), berpindah versi secara instan di editor, serta menentukan satu versi sebagai **`★ Versi Final`**. Saat lagu diklik dari daftar lirik di halaman utama, aplikasi akan secara otomatis membuka Versi Final tersebut.
-
----
-
-## Rincian Perubahan & Arsitektur
-
-### 1. Struktur Tipe Data (`src/types/index.ts`)
-- Membuat interface `LyricVersion`:
-  ```ts
-  export interface LyricVersion {
-    id: string;
-    name: string;
-    content: string;
-    isFinal: boolean;
-    createdAt: number;
-  }
-  ```
-- Menambahkan field `versions?: LyricVersion[];` dan `activeVersionId?: string;` pada `SongDraft`.
-
-### 2. Inisialisasi Otomatis & Kompatibilitas Data Lama (`useSongs.ts`)
-- **Lagu Baru**: Otomatis diawali dengan `Versi 1` yang ditandai `isFinal: true`.
-- **Lagu Lama**: Lagu yang sudah ada akan otomatis dikonversi dengan membuatkan `Versi 1` bertanda `isFinal: true` berisi konten lirik lamanya.
-
-### 3. UI Seksi Versi Lirik di Sidebar (`SongProjectDrawer.tsx`)
-Di dalam Sidebar Kanan di bawah bagian **"2. Versi Lirik"**:
-- **Daftar Versi Lirik**:
-  - Menampilkan nama versi, tanggal/waktu, serta *badge* emas **`★ Final`**.
-  - Menyorot versi yang sedang aktif diedit di kanvas TipTap.
-- **Fitur & Tombol Kontrol**:
-  - **`+ Buat Versi Baru`**: Pilihan *Duplikasi Versi Aktif* atau *Kanvas Kosong*.
-  - **Tombol `Set Final`**: Menjadikan versi terpilih sebagai Versi Final dengan 1 klik.
-  - **Ubah Nama Versi**: Mengubah nama versi (contoh: `"Versi 2 - Akustik"`).
-  - **Hapus Versi**: Menghapus versi (dinonaktifkan jika tinggal 1 versi tersisa).
-
-### 4. Integrasi dengan List Lirik Utama & Editor Canvas (`App.tsx` & `LyricEditor.tsx`)
-- **Buka dari List Utama**: Saat lagu diklik di `LyricListView`, aplikasi membaca versi yang memiliki `isFinal: true` dan memuat kontennya ke editor.
-- **Penyimpanan Real-Time**: Setiap ketikan atau perubahan akor di TipTap disimpan secara otomatis ke versi lirik yang sedang aktif.
-
----
-
-## Verifikasi
-- Menjalankan `lint_applet` dan `compile_applet`.
-- Memastikan pembuatan versi baru, *switching* versi, dan penandaan Versi Final berfungsi sempurna.
+## Progress
+- [x] Analyze proposed section sequence in `ScaleLabView.tsx`
+- [x] Reorder visual flow:
+  1. Dropdowns (Root & Jenis Skala)
+  2. Rumusnya (Box Formulasi, Interval, Semitone)
+  3. Tangga nadanya (Chips deretan nada skala interaktif)
+  4. Virtual fret/piano (Visualizer Hero, toggle Fret/Piano, tombol Fullscreen)
+  5. Pola dan pattern (Cropped box diagram fokus ke fret aktif)
+- [x] Remove the audio bar strip under the visualizer ("Bunyikan Seluruh Nada Skala")
+- [x] Redesign Pattern Box Visualizer (Fretboard & Navigasi):
+  - [x] Tombol panah [ < ] dan [ > ] dipindahkan ke header atas mengapit judul, membebaskan lebar diagram agar tidak terhimpit di HP
+  - [x] Hapus teks "Fret" di atas fretboard, kini hanya menampilkan angka bersih (misal: 8, 9, 10, 11, 12, 13) dengan titik fret inlay
+  - [x] Diagram menggunakan 100% lebar kontainer sehingga fret dan senar lebih lega dan mudah ditekan di layar HP
+- [x] Active Note Highlight saat Bunyikan Jalur Pola (Run):
+  - [x] Lingkaran nada di fretboard menyala terang (amber ring & glow animation) secara real-time mengikuti alunan nada yang sedang berbunyi dari Senar 6 ke Senar 1
+- [x] BPM / Tempo Controller:
+  - [x] Dilengkapi pengatur tempo (50 - 180 BPM, default 90 BPM) dengan tombol [-] dan [+], serta preset cepat (60, 90, 120 BPM)
+  - [x] Durasi langkah tiap nada otomatis sinkron dengan nilai BPM yang dipilih
+- [x] Build and compile verification (passed cleanly with 0 errors)
