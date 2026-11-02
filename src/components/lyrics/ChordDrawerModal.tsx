@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { X, Search, Volume2, Plus, Sparkles, Music } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { X, Search, Volume2, Music } from 'lucide-react';
 import { getFamilyChordGroups } from '../../utils/familyChords';
 import { sound } from '../../utils/audioEngine';
 import { CHROMATIC_NOTES } from '../../data/constants';
@@ -18,8 +18,15 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
   onInsertChord,
 }) => {
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'family' | 'variations' | 'dictionary'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'family' | 'extensions' | 'borrowed' | 'dictionary'>('all');
   const [dictRoot, setDictRoot] = useState('C');
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearch('');
+      setSelectedCategory('all');
+    }
+  }, [isOpen, activeKey]);
 
   // Swipe-down drag-to-dismiss state
   const [dragOffset, setDragOffset] = useState(0);
@@ -43,7 +50,7 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
     }
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = () => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
     if (dragOffset > 60) {
@@ -57,15 +64,14 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
     setDragOffset(0);
   };
 
-  // Compute family chords and variations based on active key
   const chordGroup = useMemo(() => {
     return getFamilyChordGroups(activeKey);
   }, [activeKey]);
 
-function getRootNoteFromChord(chordName: string): string {
-  const match = chordName.match(/^([A-G][b#]?)/i);
-  return match ? match[1] : 'C';
-}
+  function getRootNoteFromChord(chordName: string): string {
+    const match = chordName.match(/^([A-G][b#]?)/i);
+    return match ? match[1] : 'C';
+  }
 
   if (!isOpen) return null;
 
@@ -88,13 +94,15 @@ function getRootNoteFromChord(chordName: string): string {
     }
   };
 
-  // Filtered family chords & variations based on search query
   const query = search.trim().toLowerCase();
   const matchedFamily = chordGroup.familyChords.filter(
-    (c) => c.name.toLowerCase().includes(query) || c.degree.toLowerCase().includes(query)
+    (c) => c.name.toLowerCase().includes(query) || c.degree.toLowerCase().includes(query) || c.role.toLowerCase().includes(query)
   );
-  const matchedVariations = chordGroup.variations.filter(
-    (v) => v.name.toLowerCase().includes(query) || v.type.toLowerCase().includes(query)
+  const matchedExtensions = chordGroup.extensions.filter(
+    (v) => v.name.toLowerCase().includes(query) || v.role.toLowerCase().includes(query)
+  );
+  const matchedBorrowed = chordGroup.borrowedChords.filter(
+    (b) => b.name.toLowerCase().includes(query) || b.role.toLowerCase().includes(query)
   );
 
   const DICT_QUALITIES = [
@@ -103,18 +111,24 @@ function getRootNoteFromChord(chordName: string): string {
     { suffix: '7', label: '7th Dominan', intervals: [0, 4, 7, 10] },
     { suffix: 'maj7', label: 'Major 7th', intervals: [0, 4, 7, 11] },
     { suffix: 'm7', label: 'Minor 7th', intervals: [0, 3, 7, 10] },
+    { suffix: 'm9', label: 'Minor 9th', intervals: [0, 3, 7, 10, 14] },
+    { suffix: 'maj9', label: 'Major 9th', intervals: [0, 4, 7, 11, 14] },
     { suffix: 'sus4', label: 'Sus4', intervals: [0, 5, 7] },
     { suffix: 'sus2', label: 'Sus2', intervals: [0, 2, 7] },
     { suffix: 'add9', label: 'Add9', intervals: [0, 4, 7, 14] },
+    { suffix: '6', label: 'Major 6th', intervals: [0, 4, 7, 9] },
+    { suffix: 'm6', label: 'Minor 6th', intervals: [0, 3, 7, 9] },
     { suffix: 'dim', label: 'Diminished', intervals: [0, 3, 6] },
+    { suffix: 'aug', label: 'Augmented', intervals: [0, 4, 8] },
+    { suffix: '5', label: 'Power Chord', intervals: [0, 7] },
   ];
+
+  const scaleTypeName = chordGroup.scaleType === 'harmonic-minor' ? 'Harmonic Minor' : chordGroup.scaleType === 'melodic-minor' ? 'Melodic Minor' : chordGroup.scaleType === 'natural-minor' ? 'Natural Minor' : 'Mayor';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4 animate-fade-in">
-      {/* Backdrop */}
       <div className="fixed inset-0" onClick={onClose} />
 
-      {/* Drawer Container */}
       <div
         style={{
           transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined,
@@ -122,16 +136,15 @@ function getRootNoteFromChord(chordName: string): string {
         }}
         className="relative w-full sm:max-w-xl bg-[#FAF9F5] border-t sm:border border-[#E5E4DE] rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden z-10 select-none"
       >
-        {/* Mobile grab handle container with touch/pointer drag listener */}
+        {/* Mobile grab handle */}
         <div
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
           className="w-full py-2.5 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none sm:hidden"
-          title="Geser ke bawah untuk menutup"
         >
-          <div className="w-12 h-1.5 bg-[#D6D3D1] rounded-full hover:bg-[#A8A29E] active:bg-[#78716C] transition-colors" />
+          <div className="w-12 h-1.5 bg-[#D6D3D1] rounded-full hover:bg-[#A8A29E] transition-colors" />
         </div>
 
         {/* Header */}
@@ -148,7 +161,7 @@ function getRootNoteFromChord(chordName: string): string {
                 </span>
               </div>
               <p className="text-[11px] text-[#78716C]">
-                {chordGroup.isMinor ? 'Tangga Nada Minor' : 'Tangga Nada Mayor'} · Diatonik & Ekstensi
+                Tangga Nada {scaleTypeName} · Diatonik & Pinjaman Harmoni
               </p>
             </div>
           </div>
@@ -160,7 +173,7 @@ function getRootNoteFromChord(chordName: string): string {
           </button>
         </div>
 
-        {/* Search & Category Filter */}
+        {/* Search & Category Tabs */}
         <div className="p-3 bg-[#FAF9F5] border-b border-[#E5E4DE] space-y-2.5">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -169,7 +182,7 @@ function getRootNoteFromChord(chordName: string): string {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari akor (misal: Bm7, G/B, F#, Cmaj7)..."
+                placeholder="Cari akor (misal: Bm7, G7, Cmaj7)..."
                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#FFFFFF] border border-[#E5E4DE] rounded-lg text-[#1C1917] outline-hidden focus:border-[#1C1917] placeholder:text-[#A8A29E]"
               />
             </div>
@@ -183,7 +196,7 @@ function getRootNoteFromChord(chordName: string): string {
             )}
           </form>
 
-          {/* Category Tabs */}
+          {/* Category Tabs (Clean unboxed / button navigation) */}
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[11px] font-mono">
             <button
               onClick={() => setSelectedCategory('all')}
@@ -193,7 +206,7 @@ function getRootNoteFromChord(chordName: string): string {
                   : 'bg-[#FFFFFF] text-[#78716C] border border-[#E5E4DE] hover:text-[#1C1917]'
               }`}
             >
-              Semua Harmoni
+              Semua
             </button>
             <button
               onClick={() => setSelectedCategory('family')}
@@ -203,17 +216,27 @@ function getRootNoteFromChord(chordName: string): string {
                   : 'bg-[#FFFFFF] text-[#78716C] border border-[#E5E4DE] hover:text-[#1C1917]'
               }`}
             >
-              Family Diatonik (I-vi)
+              1. Famili Diatonik Asli
             </button>
             <button
-              onClick={() => setSelectedCategory('variations')}
+              onClick={() => setSelectedCategory('extensions')}
               className={`px-2.5 py-1 rounded-md transition cursor-pointer shrink-0 ${
-                selectedCategory === 'variations'
+                selectedCategory === 'extensions'
                   ? 'bg-[#1C1917] text-[#FAF9F5] font-bold shadow-2xs'
                   : 'bg-[#FFFFFF] text-[#78716C] border border-[#E5E4DE] hover:text-[#1C1917]'
               }`}
             >
-              Variasi & Ekstensi
+              2. Ekstensi Skala
+            </button>
+            <button
+              onClick={() => setSelectedCategory('borrowed')}
+              className={`px-2.5 py-1 rounded-md transition cursor-pointer shrink-0 ${
+                selectedCategory === 'borrowed'
+                  ? 'bg-[#1C1917] text-[#FAF9F5] font-bold shadow-2xs'
+                  : 'bg-[#FFFFFF] text-[#78716C] border border-[#E5E4DE] hover:text-[#1C1917]'
+              }`}
+            >
+              3. Pinjaman Harmoni
             </button>
             <button
               onClick={() => setSelectedCategory('dictionary')}
@@ -235,7 +258,7 @@ function getRootNoteFromChord(chordName: string): string {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-[#78716C] font-bold">
-                  Family Chord Utama (Tingkat I - vi)
+                  Famili Diatonik Asli ({scaleTypeName})
                 </span>
                 <span className="text-[10px] font-mono text-[#A8A29E]">
                   Nada Dasar: {activeKey}
@@ -245,7 +268,7 @@ function getRootNoteFromChord(chordName: string): string {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {matchedFamily.map((c) => (
                   <div
-                    key={c.degree}
+                    key={`${c.degree}-${c.name}`}
                     onClick={() => handleSelectChord(c.name)}
                     className="p-2.5 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer group flex items-center justify-between shadow-2xs active:scale-[0.98]"
                   >
@@ -275,28 +298,28 @@ function getRootNoteFromChord(chordName: string): string {
             </div>
           )}
 
-          {/* 2. VARIATIONS & EXTENSIONS SECTION */}
-          {(selectedCategory === 'all' || selectedCategory === 'variations') && matchedVariations.length > 0 && (
+          {/* 2. EXTENSIONS & VARIATIONS SECTION */}
+          {(selectedCategory === 'all' || selectedCategory === 'extensions') && matchedExtensions.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-[#78716C] font-bold">
-                  Variasi & Ekstensi Populer
+                  Ekstensi & Variasi Skala
                 </span>
                 <span className="text-[10px] font-mono text-[#A8A29E]">
-                  7th, Sus, Add9 & Slash
+                  7th, maj7, sus, add9
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {matchedVariations.map((v) => (
+                {matchedExtensions.map((v) => (
                   <div
-                    key={v.name}
+                    key={`${v.degree}-${v.name}`}
                     onClick={() => handleSelectChord(v.name)}
                     className="p-2.5 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer group flex items-center justify-between shadow-2xs active:scale-[0.98]"
                   >
                     <div className="min-w-0 flex-1 pr-1">
                       <span className="text-[9px] font-mono text-[#78716C] truncate block w-full">
-                        {v.type}
+                        {v.role}
                       </span>
                       <span className="text-sm font-mono font-bold text-[#1C1917] mt-0.5 block truncate">
                         {v.name}
@@ -317,19 +340,60 @@ function getRootNoteFromChord(chordName: string): string {
             </div>
           )}
 
-          {/* 3. CHROMATIC DICTIONARY SECTION */}
+          {/* 3. BORROWED CHORDS / PINJAMAN HARMONI SECTION */}
+          {(selectedCategory === 'all' || selectedCategory === 'borrowed') && matchedBorrowed.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[#78716C] font-bold">
+                  Pinjaman Harmoni (Modal Interchange)
+                </span>
+                <span className="text-[10px] font-mono text-[#A8A29E]">
+                  Parallel / Harmonic Borrowing
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {matchedBorrowed.map((b) => (
+                  <div
+                    key={`${b.degree}-${b.name}`}
+                    onClick={() => handleSelectChord(b.name)}
+                    className="p-2.5 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer group flex items-center justify-between shadow-2xs active:scale-[0.98]"
+                  >
+                    <div className="min-w-0 flex-1 pr-1">
+                      <span className="text-[9px] font-mono text-[#78716C] truncate block w-full">
+                        {b.role}
+                      </span>
+                      <span className="text-sm font-mono font-bold text-[#1C1917] mt-0.5 block truncate">
+                        {b.name}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handlePlaySound(e, getRootNoteFromChord(b.name), b.intervals)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EE] border border-[#E5E4DE] text-[#78716C] group-hover:text-[#1C1917] transition cursor-pointer shrink-0"
+                      title={`Dengarkan nada gitar ${b.name}`}
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4. CHROMATIC DICTIONARY SECTION */}
           {(selectedCategory === 'all' || selectedCategory === 'dictionary') && (
             <div className="space-y-2.5 pt-2 border-t border-[#E5E4DE]">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-[#78716C] font-bold">
-                  Kamus Akor Lengkap
+                  Kamus Akor Kromatik
                 </span>
                 <span className="text-[10px] font-mono text-[#A8A29E]">
                   Pilih Nada Pokok & Tipe
                 </span>
               </div>
 
-              {/* Root Row */}
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1">
                 {CHROMATIC_NOTES.map((n) => (
                   <button
@@ -347,7 +411,6 @@ function getRootNoteFromChord(chordName: string): string {
                 ))}
               </div>
 
-              {/* Qualities Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                 {DICT_QUALITIES.map((q) => {
                   const chordName = `${dictRoot}${q.suffix}`;
@@ -381,8 +444,7 @@ function getRootNoteFromChord(chordName: string): string {
             </div>
           )}
 
-          {/* Empty search state */}
-          {matchedFamily.length === 0 && matchedVariations.length === 0 && selectedCategory !== 'dictionary' && (
+          {matchedFamily.length === 0 && matchedExtensions.length === 0 && matchedBorrowed.length === 0 && selectedCategory !== 'dictionary' && (
             <div className="p-8 text-center space-y-2">
               <p className="text-xs text-[#78716C]">
                 Tidak ada akor yang cocok dengan &quot;{search}&quot;.

@@ -57,6 +57,22 @@ export const CHORD_FORMULAS: Record<string, ChordFormula> = {
     feeling: 'RnB, mellow hangat, santai tapi elegan',
     example: 'Dm7 = D - F - A - C'
   },
+  m9: {
+    name: 'Minor 9',
+    symbol: 'm9',
+    intervals: [0, 3, 7, 10, 14],
+    formulaNames: '1 - b3 - 5 - b7 - 9',
+    feeling: 'Jazzy, sophisticated, modern soul',
+    example: 'Am9 = A - C - E - G - B'
+  },
+  maj9: {
+    name: 'Major 9',
+    symbol: 'maj9',
+    intervals: [0, 4, 7, 11, 14],
+    formulaNames: '1 - 3 - 5 - 7 - 9',
+    feeling: 'Mewah, lapang, R&B modern, dreamy',
+    example: 'Cmaj9 = C - E - G - B - D'
+  },
   add9: {
     name: 'Add 9',
     symbol: 'add9',
@@ -65,6 +81,22 @@ export const CHORD_FORMULAS: Record<string, ChordFormula> = {
     feeling: 'Akor khas akustik pop mahal (Ed Sheeran/John Mayer tone)',
     example: 'Cadd9 = C - E - G - D'
   },
+  maj6: {
+    name: 'Major 6',
+    symbol: '6',
+    intervals: [0, 4, 7, 9],
+    formulaNames: '1 - 3 - 5 - 6',
+    feeling: 'Hangat, retro pop, 50s jazz vibe',
+    example: 'C6 = C - E - G - A'
+  },
+  m6: {
+    name: 'Minor 6',
+    symbol: 'm6',
+    intervals: [0, 3, 7, 9],
+    formulaNames: '1 - b3 - 5 - 6',
+    feeling: 'Bossa nova, jazz klasik, misterius manis',
+    example: 'Am6 = A - C - E - F#'
+  },
   diminished: {
     name: 'Diminished',
     symbol: 'dim',
@@ -72,5 +104,21 @@ export const CHORD_FORMULAS: Record<string, ChordFormula> = {
     formulaNames: '1 - b3 - b5',
     feeling: 'Horor, dramatis, passing chord jembatan',
     example: 'Bdim = B - D - F'
+  },
+  aug: {
+    name: 'Augmented',
+    symbol: 'aug',
+    intervals: [0, 4, 8],
+    formulaNames: '1 - 3 - #5',
+    feeling: 'Tegang, melayang, suspenseful transition',
+    example: 'Caug = C - E - G#'
+  },
+  power5: {
+    name: 'Power Chord',
+    symbol: '5',
+    intervals: [0, 7],
+    formulaNames: '1 - 5',
+    feeling: 'Gahar, distorsi rock, netral',
+    example: 'C5 = C - G'
   }
 };

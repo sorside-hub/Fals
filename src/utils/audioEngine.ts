@@ -519,8 +519,22 @@ class AudioEngine {
 
   // Play a full chord with natural instrument strumming / striking
   public playChord(root: string, intervals: number[], octave: number = 3, strum: boolean = true, instrument: InstrumentType = 'guitar') {
+    const flatToSharp: Record<string, string> = {
+      'DB': 'C#',
+      'EB': 'D#',
+      'GB': 'F#',
+      'AB': 'G#',
+      'BB': 'A#',
+      'CB': 'B',
+      'FB': 'E',
+    };
+    const cleanRoot = root.trim().toUpperCase().replace('♭', 'B').replace('♯', '#');
+    const rootMatch = cleanRoot.match(/^([A-G][B#]?)/);
+    const baseRoot = rootMatch ? rootMatch[1] : cleanRoot;
+    const normalizedRoot = flatToSharp[baseRoot] || baseRoot;
+
     const noteMapList = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const rootIndex = noteMapList.indexOf(root);
+    const rootIndex = noteMapList.indexOf(normalizedRoot);
     if (rootIndex === -1) return;
 
     intervals.forEach((interval, index) => {

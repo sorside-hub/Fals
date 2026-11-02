@@ -221,10 +221,6 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
                     </>
                   ) : (
                     <>
-                      <span className="font-medium text-[#44403C]">Key {displayKey}</span>
-                      <span className="text-[#D6D3D1]" aria-hidden="true">•</span>
-                      <span className="font-medium text-[#44403C]">{displayBpm} BPM</span>
-                      <span className="text-[#D6D3D1]" aria-hidden="true">•</span>
                       <span className="font-mono text-[11px] text-[#78716C]">{updatedDate}</span>
                     </>
                   )}

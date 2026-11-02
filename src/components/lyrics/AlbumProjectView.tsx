@@ -316,12 +316,6 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
                       </div>
 
                       <div className="flex items-center gap-3 text-[11px] text-[#78716C] mt-1 font-mono">
-                        <span className="flex items-center gap-1 font-semibold text-[#1C1917]">
-                          Key: {displayKey}
-                        </span>
-                        <span>•</span>
-                        <span>{displayBpm} BPM</span>
-                        <span>•</span>
                         <span>{track.versions?.length || 1} Versi</span>
                         {track.audioMemos && track.audioMemos.length > 0 && (
                           <>

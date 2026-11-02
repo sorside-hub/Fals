@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
 import { CHROMATIC_NOTES } from '../utils/musicTheory';
+import { calculateSemitoneShift, transposeHtmlContent } from '../utils/chordTransposer';
 import { SongDraft, BarItem, SongStatus, ProjectType } from '../types';
 import { LyricWritingToolbar } from './lyrics/LyricWritingToolbar';
 import { ChordBadgeNode } from './lyrics/ChordBadgeExtension';
@@ -284,16 +285,25 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     });
   };
 
-  const handleKeyChange = (val: string) => {
+  const handleKeyChange = (val: string, autoTranspose: boolean = true) => {
+    const shift = autoTranspose ? calculateSemitoneShift(songKey, val) : 0;
     setSongKey(val);
     const now = Date.now();
+
+    let newContent = editor ? editor.getHTML() : (currentSong.content || '');
+    if (shift !== 0 && editor) {
+      newContent = transposeHtmlContent(newContent, shift);
+      editor.commands.setContent(formatChordsForEditor(newContent));
+    }
+
     const updatedVersions = (currentSong.versions || []).map(v =>
-      v.id === currentSong.activeVersionId ? { ...v, key: val, updatedAt: now } : v
+      v.id === currentSong.activeVersionId ? { ...v, key: val, content: newContent, updatedAt: now } : v
     );
     const finalVer = updatedVersions.find(v => v.isFinal) || updatedVersions[0];
     onUpdateSong({
       ...currentSong,
       key: finalVer?.key || val,
+      content: newContent,
       versions: updatedVersions,
       updatedAt: now,
     });
@@ -523,33 +533,31 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         </div>
 
         {/* Right: Key, BPM & Status */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Key selector trigger */}
           <button
             type="button"
             onClick={() => setIsKeySelectorOpen(true)}
-            className="h-8 flex items-center gap-1.5 px-2.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group"
+            className="h-8 flex items-center gap-1 px-2 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group max-w-[130px]"
             title="Ubah Nada Dasar"
           >
-            <span className="text-[#78716C]">Key:</span>
-            <span className="font-bold text-[#1C1917]">
+            <span className="font-bold text-[#1C1917] truncate">
               {songKey}
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#78716C] group-hover:text-[#1C1917]" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#78716C] group-hover:text-[#1C1917] shrink-0" />
           </button>
 
           {/* BPM selector trigger */}
           <button
             type="button"
             onClick={() => setIsBpmModalOpen(true)}
-            className="h-8 flex items-center gap-1.5 px-2.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group"
+            className="h-8 flex items-center gap-1 px-2 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group shrink-0"
             title="Ubah & Putar Metronom BPM"
           >
-            <span className="text-[#78716C]">BPM:</span>
-            <span className="font-bold text-[#1C1917]">
-              {songBpm}
+            <span className="font-bold text-[#1C1917] whitespace-nowrap">
+              {songBpm} BPM
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#78716C] group-hover:text-[#1C1917]" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#78716C] group-hover:text-[#1C1917] shrink-0" />
           </button>
 
           {/* Status selector custom popover */}
@@ -558,12 +566,11 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
               ref={desktopStatusBtnRef}
               type="button"
               onClick={() => setIsStatusOpen((prev) => !prev)}
-              className="h-8 flex items-center gap-1.5 px-2.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group"
+              className="h-8 flex items-center gap-1 px-2 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group shrink-0"
               title="Ubah Status Progres Lagu"
             >
-              <span className="text-[#78716C]">Status:</span>
-              <span className="font-bold text-[#1C1917] capitalize">{songStatus}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#78716C] group-hover:text-[#1C1917]" />
+              <span className="font-bold text-[#1C1917] capitalize whitespace-nowrap">{songStatus}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-[#78716C] group-hover:text-[#1C1917] shrink-0" />
             </button>
             <StatusPopover
               isOpen={isStatusOpen}
@@ -580,7 +587,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
           <button
             type="button"
             onClick={() => setIsProjectDrawerOpen(true)}
-            className="w-8 h-8 flex items-center justify-center bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs text-[#1C1917]"
+            className="w-8 h-8 flex items-center justify-center bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs text-[#1C1917] shrink-0"
             title="Buka Sidebar Hub Proyek"
           >
             <Menu className="w-4 h-4" />
@@ -591,48 +598,45 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       {/* MOBILE HEADER (2 Rows: Row 1 = Controls, Row 2 = Full Title) */}
       <div className="md:hidden sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] pt-1.5 pb-2 px-3">
         {/* Row 1: Key, BPM & Status */}
-        <div className="flex items-center justify-between gap-2 pb-1">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between gap-1.5 pb-1">
+          <div className="flex items-center gap-1 min-w-0">
             {/* Key selector trigger */}
             <button
               type="button"
               onClick={() => setIsKeySelectorOpen(true)}
-              className="h-7.5 flex items-center gap-1 px-2 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[11px] font-mono cursor-pointer shadow-2xs group"
+              className="h-7.5 flex items-center gap-0.5 px-1.5 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[10px] font-mono cursor-pointer shadow-2xs group max-w-[100px] shrink-0"
               title="Ubah Nada Dasar"
             >
-              <span className="text-[#78716C]">Key:</span>
-              <span className="font-bold text-[#1C1917]">
+              <span className="font-bold text-[#1C1917] truncate">
                 {songKey}
               </span>
-              <ChevronDown className="w-3 h-3 text-[#78716C]" />
+              <ChevronDown className="w-3 h-3 text-[#78716C] shrink-0" />
             </button>
 
             {/* BPM selector trigger */}
             <button
               type="button"
               onClick={() => setIsBpmModalOpen(true)}
-              className="h-7.5 flex items-center gap-1 px-2 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[11px] font-mono cursor-pointer shadow-2xs group"
+              className="h-7.5 flex items-center gap-0.5 px-1.5 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[10px] font-mono cursor-pointer shadow-2xs group shrink-0"
               title="Ubah & Putar Metronom BPM"
             >
-              <span className="text-[#78716C]">BPM:</span>
-              <span className="font-bold text-[#1C1917]">
-                {songBpm}
+              <span className="font-bold text-[#1C1917] whitespace-nowrap">
+                {songBpm}BPM
               </span>
-              <ChevronDown className="w-3 h-3 text-[#78716C]" />
+              <ChevronDown className="w-3 h-3 text-[#78716C] shrink-0" />
             </button>
 
             {/* Status selector custom popover */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 ref={mobileStatusBtnRef}
                 type="button"
                 onClick={() => setIsMobileStatusOpen((prev) => !prev)}
-                className="h-7.5 flex items-center gap-1 px-2 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[11px] font-mono cursor-pointer shadow-2xs group"
+                className="h-7.5 flex items-center gap-0.5 px-1.5 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[10px] font-mono cursor-pointer shadow-2xs group"
                 title="Ubah Status Progres Lagu"
               >
-                <span className="text-[#78716C]">Status:</span>
-                <span className="font-bold text-[#1C1917] capitalize">{songStatus}</span>
-                <ChevronDown className="w-3 h-3 text-[#78716C]" />
+                <span className="font-bold text-[#1C1917] capitalize whitespace-nowrap">{songStatus}</span>
+                <ChevronDown className="w-3 h-3 text-[#78716C] shrink-0" />
               </button>
               <StatusPopover
                 isOpen={isMobileStatusOpen}

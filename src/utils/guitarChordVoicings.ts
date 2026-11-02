@@ -34,10 +34,26 @@ export interface ChordShapeVoicing {
   }[];
 }
 
+const flatToSharp: Record<string, string> = {
+  'Db': 'C#',
+  'Eb': 'D#',
+  'Gb': 'F#',
+  'Ab': 'G#',
+  'Bb': 'A#',
+};
+
+function getChromaticIndex(note: string): number {
+  if (!note) return 0;
+  const clean = note.trim();
+  const upper = clean.charAt(0).toUpperCase() + (clean.length > 1 ? clean.charAt(1).toLowerCase() : '');
+  const normalized = flatToSharp[upper] || upper;
+  return CHROMATIC_NOTES.indexOf(normalized);
+}
+
 // Helper to get note degree label relative to root
 function getDegreeLabel(root: string, note: string, intervals: number[]): string {
-  const rootIdx = CHROMATIC_NOTES.indexOf(root);
-  const noteIdx = CHROMATIC_NOTES.indexOf(note);
+  const rootIdx = getChromaticIndex(root);
+  const noteIdx = getChromaticIndex(note);
   if (rootIdx === -1 || noteIdx === -1) return '';
   const semitones = (noteIdx - rootIdx + 12) % 12;
 
@@ -62,13 +78,13 @@ export function getFullChordShapes(
   chordNotes: string[],
   intervals: number[]
 ): ChordShapeVoicing[] {
-  const rootPitch = CHROMATIC_NOTES.indexOf(root);
+  const rootPitch = getChromaticIndex(root);
   if (rootPitch === -1) return [];
 
-  const isMinor = chordType.includes('minor') || (chordType.includes('m') && !chordType.includes('maj'));
+  const isMinor = chordType.includes('minor') || (chordType.includes('m') && !chordType.includes('maj') && !chordType.includes('m9') && !chordType.includes('m6'));
   const is7 = chordType === 'dom7' || chordType === '7';
-  const isM7 = chordType === 'maj7';
-  const isMin7 = chordType === 'm7' || chordType === 'min7';
+  const isM7 = chordType === 'maj7' || chordType === 'maj9';
+  const isMin7 = chordType === 'm7' || chordType === 'min7' || chordType === 'm9';
 
   const shapes: ChordShapeVoicing[] = [];
 
@@ -161,7 +177,7 @@ export function getFullChordShapes(
     };
   };
 
-  // Common Open Shapes override dictionary
+  // Common Open / Barre Shapes override dictionary (supporting sharp & flat keys)
   const OPEN_CHORDS: Record<string, (number | 'x')[]> = {
     'C': ['x', 3, 2, 0, 1, 0],
     'A': ['x', 0, 2, 2, 2, 0],
@@ -172,12 +188,23 @@ export function getFullChordShapes(
     'Em': [0, 2, 2, 0, 0, 0],
     'Dm': ['x', 'x', 0, 2, 3, 1],
     'F': [1, 3, 3, 2, 1, 1],
+    'Bb': ['x', 1, 3, 3, 3, 1],
+    'Eb': ['x', 6, 8, 8, 8, 6],
+    'Ab': [4, 6, 6, 5, 4, 4],
+    'Db': ['x', 4, 6, 6, 6, 4],
+    'Gb': [2, 4, 4, 3, 2, 2],
+    'Abm': [4, 6, 6, 4, 4, 4],
+    'Bbm': ['x', 1, 3, 3, 2, 1],
+    'Ebm': ['x', 6, 8, 8, 7, 6],
     'C7': ['x', 3, 2, 3, 1, 0],
     'A7': ['x', 0, 2, 0, 2, 0],
     'E7': [0, 2, 0, 1, 0, 0],
     'D7': ['x', 'x', 0, 2, 1, 2],
     'G7': [3, 2, 0, 0, 0, 1],
     'B7': ['x', 2, 1, 2, 0, 2],
+    'Bb7': ['x', 1, 3, 1, 3, 1],
+    'Eb7': ['x', 6, 8, 6, 8, 6],
+    'Ab7': [4, 6, 4, 5, 4, 4],
     'Am7': ['x', 0, 2, 0, 1, 0],
     'Em7': [0, 2, 0, 0, 0, 0],
     'Dm7': ['x', 'x', 0, 2, 1, 1],
@@ -187,10 +214,25 @@ export function getFullChordShapes(
     'Emaj7': [0, 2, 1, 1, 0, 0],
     'Dmaj7': ['x', 'x', 0, 2, 2, 2],
     'Fmaj7': ['x', 3, 3, 2, 1, 0],
+    'Bbmaj7': ['x', 1, 3, 2, 3, 1],
+    'Ebmaj7': ['x', 6, 8, 7, 8, 6],
+    'Abmaj7': [4, 6, 5, 5, 4, 4],
+    'Cadd9': ['x', 3, 2, 0, 3, 0],
+    'C6': ['x', 3, 2, 2, 1, 0],
+    'Am6': ['x', 0, 2, 2, 1, 2],
+    'C5': [3, 3, 5, 5, 'x', 'x'],
+    'E5': [0, 2, 2, 'x', 'x', 'x'],
+    'A5': ['x', 0, 2, 2, 'x', 'x'],
   };
 
   let suffix = '';
-  if (isM7) suffix = 'maj7';
+  if (chordType === 'maj9') suffix = 'maj9';
+  else if (chordType === 'm9') suffix = 'm9';
+  else if (chordType === 'maj6' || chordType === '6') suffix = '6';
+  else if (chordType === 'm6') suffix = 'm6';
+  else if (chordType === 'aug') suffix = 'aug';
+  else if (chordType === 'power5' || chordType === '5') suffix = '5';
+  else if (isM7) suffix = 'maj7';
   else if (isMin7) suffix = 'm7';
   else if (is7) suffix = '7';
   else if (isMinor) suffix = 'm';
@@ -203,7 +245,7 @@ export function getFullChordShapes(
   }
 
   // 1. E Shape (Root on String 6)
-  const eFret = (rootPitch - CHROMATIC_NOTES.indexOf('E') + 12) % 12;
+  const eFret = (rootPitch - getChromaticIndex('E') + 12) % 12;
   let s6Frets: (number | 'x')[] = [];
   if (isMinor) {
     s6Frets = [eFret, eFret + 2, eFret + 2, eFret, eFret, eFret];
@@ -225,7 +267,7 @@ export function getFullChordShapes(
   );
 
   // 2. A Shape (Root on String 5)
-  const aFret = (rootPitch - CHROMATIC_NOTES.indexOf('A') + 12) % 12;
+  const aFret = (rootPitch - getChromaticIndex('A') + 12) % 12;
   let s5Frets: (number | 'x')[] = [];
   if (isMinor) {
     s5Frets = ['x', aFret, aFret + 2, aFret + 2, aFret + 1, aFret];
@@ -247,7 +289,7 @@ export function getFullChordShapes(
   );
 
   // 3. C Shape (Root on String 5)
-  const cBarre = (rootPitch - CHROMATIC_NOTES.indexOf('C') + 12) % 12;
+  const cBarre = (rootPitch - getChromaticIndex('C') + 12) % 12;
   if (cBarre > 0 || isM7) {
     let cFrets: (number | 'x')[] = [];
     if (isMinor) {
@@ -263,7 +305,7 @@ export function getFullChordShapes(
   }
 
   // 4. D Shape (Root on String 4)
-  const dFret = (rootPitch - CHROMATIC_NOTES.indexOf('D') + 12) % 12;
+  const dFret = (rootPitch - getChromaticIndex('D') + 12) % 12;
   let dFrets: (number | 'x')[] = [];
   if (isMinor) {
     dFrets = ['x', 'x', dFret, dFret + 2, dFret + 3, dFret + 1];
@@ -305,141 +347,43 @@ export function getTriadVoicings(
 
   const voicings: ChordShapeVoicing[] = [];
 
-  // If 4 or more chord notes (e.g. Cmaj7 = C, E, G, B; Am7 = A, C, E, G; G7 = G, B, D, F)
   if (targetNotes.length >= 4) {
     const groups4: { label: string; strings: [number, number, number, number] }[] = [
       { label: 'Senar 1-2-3-4', strings: [4, 3, 2, 1] },
       { label: 'Senar 2-3-4-5', strings: [5, 4, 3, 2] },
     ];
 
-    groups4.forEach((grp, grpIdx) => {
+    groups4.forEach((grp) => {
       const [s4, s3, s2, s1] = grp.strings;
       const g4 = GUITAR_STRINGS.find((s) => s.stringNumber === s4)!;
       const g3 = GUITAR_STRINGS.find((s) => s.stringNumber === s3)!;
       const g2 = GUITAR_STRINGS.find((s) => s.stringNumber === s2)!;
       const g1 = GUITAR_STRINGS.find((s) => s.stringNumber === s1)!;
 
-      for (let f4 = 0; f4 <= 13; f4++) {
-        const note4 = getGuitarFretNote(g4.openNote, f4).note.toUpperCase();
-        if (!targetNotes.includes(note4)) continue;
+      for (let baseFret = 0; baseFret <= 9; baseFret++) {
+        const f4 = baseFret === 0 ? 0 : baseFret;
+        const f3 = baseFret === 0 ? 0 : baseFret;
+        const f2 = baseFret === 0 ? 0 : baseFret;
+        const f1 = baseFret === 0 ? 0 : baseFret;
 
-        for (let f3 = Math.max(0, f4 - 3); f3 <= Math.min(14, f4 + 3); f3++) {
-          const note3 = getGuitarFretNote(g3.openNote, f3).note.toUpperCase();
-          if (!targetNotes.includes(note3) || note3 === note4) continue;
+        const n4 = getGuitarFretNote(g4.openNote, f4).note.toUpperCase();
+        const n3 = getGuitarFretNote(g3.openNote, f3).note.toUpperCase();
+        const n2 = getGuitarFretNote(g2.openNote, f2).note.toUpperCase();
+        const n1 = getGuitarFretNote(g1.openNote, f1).note.toUpperCase();
 
-          for (let f2 = Math.max(0, Math.min(f4, f3) - 3); f2 <= Math.min(14, Math.max(f4, f3) + 3); f2++) {
-            const note2 = getGuitarFretNote(g2.openNote, f2).note.toUpperCase();
-            if (!targetNotes.includes(note2) || note2 === note4 || note2 === note3) continue;
-
-            for (let f1 = Math.max(0, Math.min(f4, f3, f2) - 3); f1 <= Math.min(14, Math.max(f4, f3, f2) + 3); f1++) {
-              const note1 = getGuitarFretNote(g1.openNote, f1).note.toUpperCase();
-              if (!targetNotes.includes(note1) || note1 === note4 || note1 === note3 || note1 === note2) continue;
-
-              const allF = [f4, f3, f2, f1];
-              const span = Math.max(...allF) - Math.min(...allF);
-              if (span > 3) continue;
-
-              const hasOpen = allF.includes(0);
-              const minF = Math.min(...allF);
-              const maxF = Math.max(...allF);
-              const baseFret = (hasOpen || minF <= 3) ? 1 : minF;
-              const endFret = Math.max(baseFret + 3, maxF);
-
-              const fretList: (number | 'x')[] = ['x', 'x', 'x', 'x', 'x', 'x'];
-              fretList[6 - s4] = f4;
-              fretList[6 - s3] = f3;
-              fretList[6 - s2] = f2;
-              fretList[6 - s1] = f1;
-
-              const positions: ChordStringPosition[] = [];
-              const notesSeq: ChordShapeVoicing['notesSequence'] = [];
-
-              [6, 5, 4, 3, 2, 1].forEach((strNum, idx) => {
-                const fret = fretList[idx];
-                const gString = GUITAR_STRINGS.find((s) => s.stringNumber === strNum)!;
-
-                if (fret === 'x') {
-                  positions.push({ stringNum: strNum, fret: 'x', note: null, degree: null, octave: null });
-                } else {
-                  const { note, octaveDiff } = getGuitarFretNote(gString.openNote, fret);
-                  const octave = gString.openOctave + octaveDiff;
-                  const degree = getDegreeLabel(root, note, intervals);
-
-                  positions.push({ stringNum: strNum, fret, note, degree, octave });
-                  notesSeq.push({ stringNum: strNum, fret, note, degree, octave });
-                }
-              });
-
-              notesSeq.sort((a, b) => b.stringNum - a.stringNum);
-
-              const positionLabel =
-                minF <= 2
-                  ? 'Posisi Rendah'
-                  : minF <= 6
-                  ? `Fret ${minF}-${maxF}`
-                  : `Fret ${minF}-${maxF}`;
-
-              const id = `arp4-${grpIdx}-${minF}-${s4}-${s1}`;
-
-              voicings.push({
-                id,
-                name: `${grp.label} • ${positionLabel}`,
-                category: 'triad',
-                stringSet: grp.label,
-                frets: fretList,
-                fretRange: [baseFret, endFret],
-                baseFret,
-                positions,
-                notesSequence: notesSeq,
-              });
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // Also search 3-note string groups
-  const stringGroups: { label: string; strings: [number, number, number] }[] = [
-    { label: 'Senar 1-2-3', strings: [3, 2, 1] },
-    { label: 'Senar 2-3-4', strings: [4, 3, 2] },
-    { label: 'Senar 3-4-5', strings: [5, 4, 3] },
-  ];
-
-  const triadTargetNotes = targetNotes.slice(0, 3);
-
-  stringGroups.forEach((grp, grpIdx) => {
-    const [sLow, sMid, sHigh] = grp.strings;
-    const gLow = GUITAR_STRINGS.find((s) => s.stringNumber === sLow)!;
-    const gMid = GUITAR_STRINGS.find((s) => s.stringNumber === sMid)!;
-    const gHigh = GUITAR_STRINGS.find((s) => s.stringNumber === sHigh)!;
-
-    for (let fLow = 0; fLow <= 13; fLow++) {
-      const noteLow = getGuitarFretNote(gLow.openNote, fLow).note.toUpperCase();
-      if (!triadTargetNotes.includes(noteLow)) continue;
-
-      for (let fMid = Math.max(0, fLow - 2); fMid <= Math.min(14, fLow + 3); fMid++) {
-        const noteMid = getGuitarFretNote(gMid.openNote, fMid).note.toUpperCase();
-        if (!triadTargetNotes.includes(noteMid) || noteMid === noteLow) continue;
-
-        for (let fHigh = Math.max(0, Math.min(fLow, fMid) - 2); fHigh <= Math.min(14, Math.max(fLow, fMid) + 3); fHigh++) {
-          const noteHigh = getGuitarFretNote(gHigh.openNote, fHigh).note.toUpperCase();
-          if (!triadTargetNotes.includes(noteHigh) || noteHigh === noteLow || noteHigh === noteMid) continue;
-
-          const allF = [fLow, fMid, fHigh];
-          const span = Math.max(...allF) - Math.min(...allF);
-          if (span > 3) continue;
-
-          const hasOpen = allF.includes(0);
-          const minF = Math.min(...allF);
-          const maxF = Math.max(...allF);
-          const baseFret = (hasOpen || minF <= 3) ? 1 : minF;
-          const endFret = Math.max(baseFret + 3, maxF);
-
+        if (
+          targetNotes.includes(n4) &&
+          targetNotes.includes(n3) &&
+          targetNotes.includes(n2) &&
+          targetNotes.includes(n1)
+        ) {
           const fretList: (number | 'x')[] = ['x', 'x', 'x', 'x', 'x', 'x'];
-          fretList[6 - sLow] = fLow;
-          fretList[6 - sMid] = fMid;
-          fretList[6 - sHigh] = fHigh;
+          [6, 5, 4, 3, 2, 1].forEach((sNum, sIdx) => {
+            if (sNum === s4) fretList[sIdx] = f4;
+            if (sNum === s3) fretList[sIdx] = f3;
+            if (sNum === s2) fretList[sIdx] = f2;
+            if (sNum === s1) fretList[sIdx] = f1;
+          });
 
           const positions: ChordStringPosition[] = [];
           const notesSeq: ChordShapeVoicing['notesSequence'] = [];
@@ -447,56 +391,32 @@ export function getTriadVoicings(
           [6, 5, 4, 3, 2, 1].forEach((strNum, idx) => {
             const fret = fretList[idx];
             const gString = GUITAR_STRINGS.find((s) => s.stringNumber === strNum)!;
-
             if (fret === 'x') {
               positions.push({ stringNum: strNum, fret: 'x', note: null, degree: null, octave: null });
             } else {
-              const { note, octaveDiff } = getGuitarFretNote(gString.openNote, fret);
+              const { note, octaveDiff } = getGuitarFretNote(gString.openNote, fret as number);
               const octave = gString.openOctave + octaveDiff;
               const degree = getDegreeLabel(root, note, intervals);
-
-              positions.push({ stringNum: strNum, fret, note, degree, octave });
-              notesSeq.push({ stringNum: strNum, fret, note, degree, octave });
+              positions.push({ stringNum: strNum, fret: fret as number, note, degree, octave });
+              notesSeq.push({ stringNum: strNum, fret: fret as number, note, degree, octave });
             }
           });
 
-          notesSeq.sort((a, b) => b.stringNum - a.stringNum);
-
-          const positionLabel =
-            minF <= 2
-              ? 'Posisi Rendah'
-              : minF <= 6
-              ? `Fret ${minF}-${maxF}`
-              : `Fret ${minF}-${maxF}`;
-
-          const id = `triad-${grpIdx}-${minF}-${sLow}-${sHigh}`;
-
           voicings.push({
-            id,
-            name: `${grp.label} • ${positionLabel}`,
+            id: `triad-4-${grp.label}-${baseFret}`,
+            name: `${grp.label} (Fret ${baseFret || 'Open'})`,
             category: 'triad',
-            stringSet: grp.label,
             frets: fretList,
-            fretRange: [baseFret, endFret],
-            baseFret,
+            fretRange: [Math.max(1, baseFret), Math.max(4, baseFret + 3)],
+            baseFret: Math.max(1, baseFret === 0 ? 1 : baseFret),
             positions,
             notesSequence: notesSeq,
           });
+          break;
         }
       }
-    }
-  });
+    });
+  }
 
-  const uniqueVoicings: ChordShapeVoicing[] = [];
-  const seenFretCombo = new Set<string>();
-
-  voicings.forEach((v) => {
-    const key = `${v.stringSet}-${v.frets.join('-')}`;
-    if (!seenFretCombo.has(key)) {
-      seenFretCombo.add(key);
-      uniqueVoicings.push(v);
-    }
-  });
-
-  return uniqueVoicings.slice(0, 8);
+  return voicings;
 }

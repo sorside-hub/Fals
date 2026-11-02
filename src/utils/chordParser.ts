@@ -67,6 +67,10 @@ export function parseChordSymbol(symbol: string): ParsedChord {
     formulaKey = 'maj7';
   } else if (suffix === 'm7' || suffix === 'min7' || suffix === '-7') {
     formulaKey = 'm7';
+  } else if (suffix === 'm9') {
+    formulaKey = 'm9';
+  } else if (suffix === 'maj9') {
+    formulaKey = 'maj9';
   } else if (suffix === '7' || suffix === 'dom7') {
     formulaKey = 'dom7';
   } else if (suffix === 'sus2') {
@@ -75,8 +79,16 @@ export function parseChordSymbol(symbol: string): ParsedChord {
     formulaKey = 'sus4';
   } else if (suffix === 'add9' || suffix === '2') {
     formulaKey = 'add9';
+  } else if (suffix === '6') {
+    formulaKey = 'maj6';
+  } else if (suffix === 'm6') {
+    formulaKey = 'm6';
   } else if (suffix === 'dim' || suffix === 'o') {
     formulaKey = 'dim';
+  } else if (suffix === 'aug' || suffix === '+') {
+    formulaKey = 'aug';
+  } else if (suffix === '5') {
+    formulaKey = 'power5';
   }
 
   const formula = CHORD_FORMULAS[formulaKey] || CHORD_FORMULAS['major'];
