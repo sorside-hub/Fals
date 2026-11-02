@@ -62,11 +62,16 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
     return getFamilyChordGroups(activeKey);
   }, [activeKey]);
 
+function getRootNoteFromChord(chordName: string): string {
+  const match = chordName.match(/^([A-G][b#]?)/i);
+  return match ? match[1] : 'C';
+}
+
   if (!isOpen) return null;
 
   const handlePlaySound = (e: React.MouseEvent, keyName: string, intervals: number[]) => {
     e.stopPropagation();
-    sound.playChord(keyName, intervals);
+    sound.playChord(keyName, intervals, 3, true, 'guitar');
   };
 
   const handleSelectChord = (chordName: string) => {
@@ -173,7 +178,7 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
                 type="submit"
                 className="px-3 py-1.5 text-xs font-mono font-bold bg-[#1C1917] text-[#FFFFFF] rounded-lg transition hover:bg-[#292524] cursor-pointer shrink-0"
               >
-                + [{search.trim()}]
+                + {search.trim()}
               </button>
             )}
           </form>
@@ -252,7 +257,7 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
                         <span className="truncate max-w-[80px]">{c.role}</span>
                       </div>
                       <div className="text-base font-mono font-bold text-[#1C1917] mt-0.5">
-                        [{c.name}]
+                        {c.name}
                       </div>
                     </div>
 
@@ -260,7 +265,7 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
                       type="button"
                       onClick={(e) => handlePlaySound(e, c.rootNote, c.intervals)}
                       className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EE] border border-[#E5E4DE] text-[#78716C] group-hover:text-[#1C1917] transition cursor-pointer shrink-0"
-                      title={`Dengarkan nada [${c.name}]`}
+                      title={`Dengarkan nada gitar ${c.name}`}
                     >
                       <Volume2 className="w-3.5 h-3.5" />
                     </button>
@@ -282,21 +287,31 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {matchedVariations.map((v) => (
-                  <button
+                  <div
                     key={v.name}
-                    type="button"
                     onClick={() => handleSelectChord(v.name)}
-                    className="p-2 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] hover:bg-[#FAF9F5] rounded-xl transition cursor-pointer text-left flex flex-col justify-between shadow-2xs active:scale-[0.98]"
+                    className="p-2.5 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer group flex items-center justify-between shadow-2xs active:scale-[0.98]"
                   >
-                    <span className="text-[9px] font-mono text-[#78716C] truncate w-full">
-                      {v.type}
-                    </span>
-                    <span className="text-sm font-mono font-bold text-[#1C1917] mt-1">
-                      [{v.name}]
-                    </span>
-                  </button>
+                    <div className="min-w-0 flex-1 pr-1">
+                      <span className="text-[9px] font-mono text-[#78716C] truncate block w-full">
+                        {v.type}
+                      </span>
+                      <span className="text-sm font-mono font-bold text-[#1C1917] mt-0.5 block truncate">
+                        {v.name}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handlePlaySound(e, getRootNoteFromChord(v.name), v.intervals)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EE] border border-[#E5E4DE] text-[#78716C] group-hover:text-[#1C1917] transition cursor-pointer shrink-0"
+                      title={`Dengarkan nada gitar ${v.name}`}
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -333,26 +348,33 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
               </div>
 
               {/* Qualities Grid */}
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                 {DICT_QUALITIES.map((q) => {
                   const chordName = `${dictRoot}${q.suffix}`;
                   return (
-                    <button
+                    <div
                       key={q.suffix}
-                      type="button"
                       onClick={() => handleSelectChord(chordName)}
-                      className="p-2 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] hover:bg-[#FAF9F5] rounded-xl transition cursor-pointer text-left flex items-center justify-between shadow-2xs group"
+                      className="p-2 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer flex items-center justify-between shadow-2xs group active:scale-[0.98]"
                     >
-                      <div>
+                      <div className="min-w-0 flex-1 pr-1">
                         <div className="text-xs font-mono font-bold text-[#1C1917]">
-                          [{chordName}]
+                          {chordName}
                         </div>
-                        <div className="text-[9px] font-mono text-[#78716C]">
+                        <div className="text-[9px] font-mono text-[#78716C] truncate">
                           {q.label}
                         </div>
                       </div>
-                      <Plus className="w-3.5 h-3.5 text-[#A8A29E] group-hover:text-[#1C1917]" />
-                    </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handlePlaySound(e, dictRoot, q.intervals)}
+                        className="w-6 h-6 flex items-center justify-center rounded-md bg-[#FAF9F5] hover:bg-[#F5F4EE] border border-[#E5E4DE] text-[#78716C] group-hover:text-[#1C1917] transition cursor-pointer shrink-0"
+                        title={`Dengarkan nada gitar ${chordName}`}
+                      >
+                        <Volume2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -370,7 +392,7 @@ export const ChordDrawerModal: React.FC<ChordDrawerModalProps> = ({
                 onClick={() => handleSelectChord(search.trim())}
                 className="px-3.5 py-1.5 bg-[#1C1917] text-white rounded-lg text-xs font-mono font-bold cursor-pointer"
               >
-                Tetap Sisipkan [{search.trim()}]
+                Tetap Sisipkan {search.trim()}
               </button>
             </div>
           )}

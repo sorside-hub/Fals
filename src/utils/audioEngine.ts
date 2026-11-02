@@ -518,7 +518,7 @@ class AudioEngine {
   }
 
   // Play a full chord with natural instrument strumming / striking
-  public playChord(root: string, intervals: number[], octave: number = 4, strum: boolean = true, instrument: InstrumentType = 'piano') {
+  public playChord(root: string, intervals: number[], octave: number = 3, strum: boolean = true, instrument: InstrumentType = 'guitar') {
     const noteMapList = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const rootIndex = noteMapList.indexOf(root);
     if (rootIndex === -1) return;
