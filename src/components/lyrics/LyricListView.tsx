@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SongDraft, ProjectType, SongStatus } from '../../types';
+import { formatDate } from '../../utils/dateFormatter';
 import { Plus, Search, Trash2, FileText, Disc3, Layers, Library } from 'lucide-react';
 import { NewProjectModal } from './NewProjectModal';
 
@@ -170,11 +171,9 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
             const displayKey = finalVersion?.key || song.key || 'C';
             const displayBpm = finalVersion?.bpm ?? song.bpm ?? 95;
 
-            const updatedDate = new Date(song.updatedAt).toLocaleDateString('id-ID', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric'
-            }).toUpperCase();
+            const updatedDate = isCollection
+              ? formatDate(song.updatedAt)
+              : formatDate(finalVersion?.updatedAt || finalVersion?.createdAt || song.updatedAt);
 
             return (
               <div

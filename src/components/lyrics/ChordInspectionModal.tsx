@@ -30,7 +30,7 @@ export const ChordInspectionModal: React.FC<ChordInspectionModalProps> = ({
   onClose,
   chordSymbol,
 }) => {
-  const [activeCategory, setActiveCategory] = useState<'triad' | 'full'>('triad');
+  const [activeCategory, setActiveCategory] = useState<'triad' | 'full'>('full');
   const [selectedShapeIndex, setSelectedShapeIndex] = useState<number>(0);
   const [activePlayingString, setActivePlayingString] = useState<number | null>(null);
   const [isArpeggiating, setIsArpeggiating] = useState<boolean>(false);
@@ -221,7 +221,7 @@ export const ChordInspectionModal: React.FC<ChordInspectionModalProps> = ({
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Triad</span>
+              <span>Arpeggio</span>
             </button>
             <button
               type="button"

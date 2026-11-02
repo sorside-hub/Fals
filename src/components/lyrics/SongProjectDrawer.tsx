@@ -20,6 +20,7 @@ import {
   Music,
 } from 'lucide-react';
 import { SongDraft, LyricVersion, AudioMemo, ProjectType } from '../../types';
+import { formatDate } from '../../utils/dateFormatter';
 import { AudioPill } from './AudioPill';
 import { AudioRecorderModal } from './AudioRecorderModal';
 import { MoveToAlbumModal } from './MoveToAlbumModal';
@@ -174,9 +175,11 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
       bpm: song.bpm,
       isFinal: true,
       createdAt: song.updatedAt,
+      updatedAt: song.updatedAt,
     }
   ];
 
+  const activeVersion = versions.find(v => v.id === song.activeVersionId) || versions[0];
   const audioMemos = song.audioMemos || [];
 
   return (
@@ -219,18 +222,11 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
               onClose();
               onOpenConceptEditor();
             }}
-            className="p-4 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer shadow-2xs group space-y-2.5"
+            className="p-3.5 sm:p-4 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer shadow-2xs group"
           >
             <p className="text-xs text-[#78716C] italic leading-relaxed line-clamp-3">
               "{getConceptExcerpt(song.concept)}"
             </p>
-
-            <div className="pt-1 flex items-center justify-between border-t border-[#E5E4DE]/60">
-              <span className="text-[11px] font-bold text-[#1C1917] group-hover:underline flex items-center gap-1">
-                Buka Editor Konsep
-              </span>
-              <ChevronRight className="w-4 h-4 text-[#78716C] group-hover:translate-x-0.5 transition-transform" />
-            </div>
           </div>
         </div>
 
@@ -298,110 +294,61 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
                       onClose(); // Automatically close drawer when selecting a version card
                     }
                   }}
-                  className={`p-3 rounded-xl border transition flex flex-col space-y-2 cursor-pointer ${
+                  className={`p-3 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer ${
                     isActive
                       ? 'bg-[#FFFFFF] border-[#1C1917] shadow-xs ring-1 ring-[#1C1917]/10'
                       : 'bg-[#FFFFFF] border-[#E5E4DE] hover:border-[#1C1917]'
                   }`}
                 >
-                  {/* Top Row: Name & Badges */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      {/* Active Indicator Dot */}
-                      <span
-                        className={`w-2 h-2 rounded-full shrink-0 ${
-                          isActive ? 'bg-amber-500 ring-2 ring-amber-500/20' : 'bg-[#D6D3D1]'
-                        }`}
-                      />
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {/* Active Indicator Dot */}
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        isActive ? 'bg-amber-500 ring-2 ring-amber-500/20' : 'bg-[#D6D3D1]'
+                      }`}
+                    />
 
-                      {/* Name input or text */}
-                      {isEditing ? (
-                        <div
-                          className="flex items-center gap-1 flex-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="text"
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveRename(e, ver.id);
-                            }}
-                            className="w-full px-2 py-0.5 text-xs bg-[#FAF9F5] border border-[#1C1917] rounded outline-hidden font-bold"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => handleSaveRename(e, ver.id)}
-                            className="p-1 bg-[#1C1917] text-white rounded cursor-pointer"
-                          >
-                            <Check className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="font-bold text-xs text-[#1C1917] truncate">
-                          {ver.name}
-                        </span>
-                      )}
-
-                      {/* Final Version Badge */}
-                      {ver.isFinal && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-mono font-bold shrink-0">
-                          <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                          <span>Final</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Action icons */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {!isEditing && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleStartRename(e, ver)}
-                          className="p-1 text-[#A8A29E] hover:text-[#1C1917] hover:bg-[#F5F4EE] rounded transition cursor-pointer"
-                          title="Ubah Nama Versi"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-
-                      {versions.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setVersionToDelete(ver);
+                    {/* Name input or text */}
+                    {isEditing ? (
+                      <div
+                        className="flex items-center gap-1 flex-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveRename(e, ver.id);
                           }}
-                          className="p-1 text-[#A8A29E] hover:text-rose-600 hover:bg-[#FAF9F5] rounded transition cursor-pointer"
-                          title="Hapus Versi Ini"
+                          className="w-full px-2 py-0.5 text-xs bg-[#FAF9F5] border border-[#1C1917] rounded outline-hidden font-bold"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => handleSaveRename(e, ver.id)}
+                          className="p-1 bg-[#1C1917] text-white rounded cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Check className="w-3 h-3" />
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <span className="font-bold text-xs text-[#1C1917] truncate">
+                        {ver.name}
+                      </span>
+                    )}
+
+                    {/* Final Version Badge */}
+                    {ver.isFinal && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-mono font-bold shrink-0">
+                        <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                        <span>Final</span>
+                      </span>
+                    )}
                   </div>
 
-                  {/* Middle Row: Key & BPM Info */}
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#F5F4EE] border border-[#E5E4DE] text-[#44403C] font-semibold">
-                      Key {ver.key || song.key || 'C'}
-                    </span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#F5F4EE] border border-[#E5E4DE] text-[#44403C] font-semibold">
-                      {ver.bpm || song.bpm || 95} BPM
-                    </span>
-                  </div>
-
-                  {/* Bottom Row: Active Status / Set Final Action */}
-                  <div className="flex items-center justify-between pt-1 border-t border-[#E5E4DE]/60 text-[11px]">
-                    <span className="font-mono text-[#78716C]">
-                      {isActive ? (
-                        <span className="font-bold text-[#1C1917]">▶ Sedang Dibuka</span>
-                      ) : (
-                        <span>Klik untuk buka versi ini</span>
-                      )}
-                    </span>
-
+                  {/* Action icons */}
+                  <div className="flex items-center gap-1 shrink-0">
                     {!ver.isFinal && (
                       <button
                         type="button"
@@ -409,11 +356,36 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
                           e.stopPropagation();
                           onSetFinalVersion(ver.id);
                         }}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#F5F4EE] hover:bg-[#EAE8DF] text-[#44403C] font-medium border border-[#E5E4DE] transition cursor-pointer"
-                        title="Jadikan versi ini sebagai Versi Final yang terbuka otomatis saat lagu dipilih"
+                        className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#F5F4EE] hover:bg-[#EAE8DF] text-[#44403C] text-[10.5px] font-medium border border-[#E5E4DE] transition cursor-pointer"
+                        title="Set sebagai Versi Final"
                       >
                         <Star className="w-3 h-3 text-[#78716C]" />
                         <span>Set Final</span>
+                      </button>
+                    )}
+
+                    {!isEditing && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleStartRename(e, ver)}
+                        className="p-1 text-[#A8A29E] hover:text-[#1C1917] hover:bg-[#F5F4EE] rounded transition cursor-pointer"
+                        title="Ubah Nama Versi"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {versions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setVersionToDelete(ver);
+                        }}
+                        className="p-1 text-[#A8A29E] hover:text-rose-600 hover:bg-[#FAF9F5] rounded transition cursor-pointer"
+                        title="Hapus Versi Ini"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
@@ -595,6 +567,22 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
               </button>
             </div>
           )}
+        </div>
+
+        {/* Footer Tanggal Proyek & Versi Aktif */}
+        <div className="pt-3 border-t border-[#E5E4DE] text-[11px] font-mono text-[#78716C] flex items-center justify-between gap-2 shrink-0 mt-auto">
+          <div>
+            <span className="opacity-70">createdAt:</span>{' '}
+            <span className="font-bold text-[#44403C]">
+              {formatDate(activeVersion?.createdAt || song.createdAt || song.updatedAt)}
+            </span>
+          </div>
+          <div>
+            <span className="opacity-70">updatedAt:</span>{' '}
+            <span className="font-bold text-[#1C1917]">
+              {formatDate(activeVersion?.updatedAt || activeVersion?.createdAt || song.updatedAt)}
+            </span>
+          </div>
         </div>
 
         {/* Modal Konfirmasi Hapus Versi Lirik */}

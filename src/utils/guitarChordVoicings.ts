@@ -294,28 +294,119 @@ export function getFullChordShapes(
   return uniqueShapes;
 }
 
-// Generate 3-Note Triads & Arpeggios across contiguous 3-string groups
+// Generate Arpeggios & Triads across contiguous string groups
 export function getTriadVoicings(
   root: string,
   chordNotes: string[],
   intervals: number[]
 ): ChordShapeVoicing[] {
-  // We search the 3 primary triad string groups:
-  // 1. Strings 1-2-3 (Treble / Solos / Melodic fills)
-  // 2. Strings 2-3-4 (Mid / Acoustic fingerpicking)
-  // 3. Strings 3-4-5 (Warm / Rhythm)
+  const targetNotes = chordNotes.map((n) => n.toUpperCase());
+  if (targetNotes.length < 3) return [];
 
+  const voicings: ChordShapeVoicing[] = [];
+
+  // If 4 or more chord notes (e.g. Cmaj7 = C, E, G, B; Am7 = A, C, E, G; G7 = G, B, D, F)
+  if (targetNotes.length >= 4) {
+    const groups4: { label: string; strings: [number, number, number, number] }[] = [
+      { label: 'Senar 1-2-3-4', strings: [4, 3, 2, 1] },
+      { label: 'Senar 2-3-4-5', strings: [5, 4, 3, 2] },
+    ];
+
+    groups4.forEach((grp, grpIdx) => {
+      const [s4, s3, s2, s1] = grp.strings;
+      const g4 = GUITAR_STRINGS.find((s) => s.stringNumber === s4)!;
+      const g3 = GUITAR_STRINGS.find((s) => s.stringNumber === s3)!;
+      const g2 = GUITAR_STRINGS.find((s) => s.stringNumber === s2)!;
+      const g1 = GUITAR_STRINGS.find((s) => s.stringNumber === s1)!;
+
+      for (let f4 = 0; f4 <= 13; f4++) {
+        const note4 = getGuitarFretNote(g4.openNote, f4).note.toUpperCase();
+        if (!targetNotes.includes(note4)) continue;
+
+        for (let f3 = Math.max(0, f4 - 3); f3 <= Math.min(14, f4 + 3); f3++) {
+          const note3 = getGuitarFretNote(g3.openNote, f3).note.toUpperCase();
+          if (!targetNotes.includes(note3) || note3 === note4) continue;
+
+          for (let f2 = Math.max(0, Math.min(f4, f3) - 3); f2 <= Math.min(14, Math.max(f4, f3) + 3); f2++) {
+            const note2 = getGuitarFretNote(g2.openNote, f2).note.toUpperCase();
+            if (!targetNotes.includes(note2) || note2 === note4 || note2 === note3) continue;
+
+            for (let f1 = Math.max(0, Math.min(f4, f3, f2) - 3); f1 <= Math.min(14, Math.max(f4, f3, f2) + 3); f1++) {
+              const note1 = getGuitarFretNote(g1.openNote, f1).note.toUpperCase();
+              if (!targetNotes.includes(note1) || note1 === note4 || note1 === note3 || note1 === note2) continue;
+
+              const allF = [f4, f3, f2, f1];
+              const span = Math.max(...allF) - Math.min(...allF);
+              if (span > 3) continue;
+
+              const hasOpen = allF.includes(0);
+              const minF = Math.min(...allF);
+              const maxF = Math.max(...allF);
+              const baseFret = (hasOpen || minF <= 3) ? 1 : minF;
+              const endFret = Math.max(baseFret + 3, maxF);
+
+              const fretList: (number | 'x')[] = ['x', 'x', 'x', 'x', 'x', 'x'];
+              fretList[6 - s4] = f4;
+              fretList[6 - s3] = f3;
+              fretList[6 - s2] = f2;
+              fretList[6 - s1] = f1;
+
+              const positions: ChordStringPosition[] = [];
+              const notesSeq: ChordShapeVoicing['notesSequence'] = [];
+
+              [6, 5, 4, 3, 2, 1].forEach((strNum, idx) => {
+                const fret = fretList[idx];
+                const gString = GUITAR_STRINGS.find((s) => s.stringNumber === strNum)!;
+
+                if (fret === 'x') {
+                  positions.push({ stringNum: strNum, fret: 'x', note: null, degree: null, octave: null });
+                } else {
+                  const { note, octaveDiff } = getGuitarFretNote(gString.openNote, fret);
+                  const octave = gString.openOctave + octaveDiff;
+                  const degree = getDegreeLabel(root, note, intervals);
+
+                  positions.push({ stringNum: strNum, fret, note, degree, octave });
+                  notesSeq.push({ stringNum: strNum, fret, note, degree, octave });
+                }
+              });
+
+              notesSeq.sort((a, b) => b.stringNum - a.stringNum);
+
+              const positionLabel =
+                minF <= 2
+                  ? 'Posisi Rendah'
+                  : minF <= 6
+                  ? `Fret ${minF}-${maxF}`
+                  : `Fret ${minF}-${maxF}`;
+
+              const id = `arp4-${grpIdx}-${minF}-${s4}-${s1}`;
+
+              voicings.push({
+                id,
+                name: `${grp.label} • ${positionLabel}`,
+                category: 'triad',
+                stringSet: grp.label,
+                frets: fretList,
+                fretRange: [baseFret, endFret],
+                baseFret,
+                positions,
+                notesSequence: notesSeq,
+              });
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Also search 3-note string groups
   const stringGroups: { label: string; strings: [number, number, number] }[] = [
     { label: 'Senar 1-2-3', strings: [3, 2, 1] },
     { label: 'Senar 2-3-4', strings: [4, 3, 2] },
     { label: 'Senar 3-4-5', strings: [5, 4, 3] },
   ];
 
-  // We want pure 3 chord notes (Root, 3rd, 5th)
-  const targetNotes = chordNotes.slice(0, 3).map((n) => n.toUpperCase());
-  if (targetNotes.length < 3) return [];
-
-  const voicings: ChordShapeVoicing[] = [];
+  const triadTargetNotes = targetNotes.slice(0, 3);
 
   stringGroups.forEach((grp, grpIdx) => {
     const [sLow, sMid, sHigh] = grp.strings;
@@ -323,25 +414,21 @@ export function getTriadVoicings(
     const gMid = GUITAR_STRINGS.find((s) => s.stringNumber === sMid)!;
     const gHigh = GUITAR_STRINGS.find((s) => s.stringNumber === sHigh)!;
 
-    // Search frets 0 to 14
     for (let fLow = 0; fLow <= 13; fLow++) {
       const noteLow = getGuitarFretNote(gLow.openNote, fLow).note.toUpperCase();
-      if (!targetNotes.includes(noteLow)) continue;
+      if (!triadTargetNotes.includes(noteLow)) continue;
 
-      // Search matching fret on mid string within 3 frets
       for (let fMid = Math.max(0, fLow - 2); fMid <= Math.min(14, fLow + 3); fMid++) {
         const noteMid = getGuitarFretNote(gMid.openNote, fMid).note.toUpperCase();
-        if (!targetNotes.includes(noteMid) || noteMid === noteLow) continue;
+        if (!triadTargetNotes.includes(noteMid) || noteMid === noteLow) continue;
 
-        // Search matching fret on high string
         for (let fHigh = Math.max(0, Math.min(fLow, fMid) - 2); fHigh <= Math.min(14, Math.max(fLow, fMid) + 3); fHigh++) {
           const noteHigh = getGuitarFretNote(gHigh.openNote, fHigh).note.toUpperCase();
-          if (!targetNotes.includes(noteHigh) || noteHigh === noteLow || noteHigh === noteMid) continue;
+          if (!triadTargetNotes.includes(noteHigh) || noteHigh === noteLow || noteHigh === noteMid) continue;
 
-          // Found a 3-note triad!
           const allF = [fLow, fMid, fHigh];
           const span = Math.max(...allF) - Math.min(...allF);
-          if (span > 3) continue; // Must be easily reachable with fingers
+          if (span > 3) continue;
 
           const hasOpen = allF.includes(0);
           const minF = Math.min(...allF);
@@ -349,15 +436,11 @@ export function getTriadVoicings(
           const baseFret = (hasOpen || minF <= 3) ? 1 : minF;
           const endFret = Math.max(baseFret + 3, maxF);
 
-          // Build full 6-string frets representation (6 down to 1)
           const fretList: (number | 'x')[] = ['x', 'x', 'x', 'x', 'x', 'x'];
-          // Map to correct string index in [6, 5, 4, 3, 2, 1]:
-          // str 6 = 0, str 5 = 1, str 4 = 2, str 3 = 3, str 2 = 4, str 1 = 5
           fretList[6 - sLow] = fLow;
           fretList[6 - sMid] = fMid;
           fretList[6 - sHigh] = fHigh;
 
-          // Get positions and notes in ascending order of string pitch
           const positions: ChordStringPosition[] = [];
           const notesSeq: ChordShapeVoicing['notesSequence'] = [];
 
@@ -366,37 +449,17 @@ export function getTriadVoicings(
             const gString = GUITAR_STRINGS.find((s) => s.stringNumber === strNum)!;
 
             if (fret === 'x') {
-              positions.push({
-                stringNum: strNum,
-                fret: 'x',
-                note: null,
-                degree: null,
-                octave: null,
-              });
+              positions.push({ stringNum: strNum, fret: 'x', note: null, degree: null, octave: null });
             } else {
               const { note, octaveDiff } = getGuitarFretNote(gString.openNote, fret);
               const octave = gString.openOctave + octaveDiff;
               const degree = getDegreeLabel(root, note, intervals);
 
-              positions.push({
-                stringNum: strNum,
-                fret,
-                note,
-                degree,
-                octave,
-              });
-
-              notesSeq.push({
-                stringNum: strNum,
-                fret,
-                note,
-                degree,
-                octave,
-              });
+              positions.push({ stringNum: strNum, fret, note, degree, octave });
+              notesSeq.push({ stringNum: strNum, fret, note, degree, octave });
             }
           });
 
-          // Sort notesSequence from lowest string to highest string (str 5 -> 4 -> 3 -> 2 -> 1)
           notesSeq.sort((a, b) => b.stringNum - a.stringNum);
 
           const positionLabel =
@@ -404,7 +467,7 @@ export function getTriadVoicings(
               ? 'Posisi Rendah'
               : minF <= 6
               ? `Fret ${minF}-${maxF}`
-              : `Fret ${minF}-${maxF} (Tinggi)`;
+              : `Fret ${minF}-${maxF}`;
 
           const id = `triad-${grpIdx}-${minF}-${sLow}-${sHigh}`;
 
@@ -424,7 +487,6 @@ export function getTriadVoicings(
     }
   });
 
-  // Limit to most useful distinct voicings across low, mid, high registers
   const uniqueVoicings: ChordShapeVoicing[] = [];
   const seenFretCombo = new Set<string>();
 

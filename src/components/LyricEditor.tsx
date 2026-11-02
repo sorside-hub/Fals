@@ -81,6 +81,8 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     const raw = currentSong.status || 'draft';
     return raw === 'proses' ? 'progress' : raw;
   });
+  const desktopStatusBtnRef = useRef<HTMLButtonElement>(null);
+  const mobileStatusBtnRef = useRef<HTMLButtonElement>(null);
   const [selectedChordForInspection, setSelectedChordForInspection] = useState<string | null>(null);
   const [isKeySelectorOpen, setIsKeySelectorOpen] = useState(false);
   const [isBpmModalOpen, setIsBpmModalOpen] = useState(false);
@@ -196,8 +198,9 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
+      const now = Date.now();
       const updatedVersions = (currentSong.versions || []).map(v =>
-        v.id === currentSong.activeVersionId ? { ...v, content: html } : v
+        v.id === currentSong.activeVersionId ? { ...v, content: html, updatedAt: now } : v
       );
       const finalVer = updatedVersions.find(v => v.isFinal) || updatedVersions[0];
       onUpdateSong({
@@ -207,7 +210,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         bpm: finalVer?.bpm ?? songBpm,
         content: html,
         versions: updatedVersions.length > 0 ? updatedVersions : currentSong.versions,
-        updatedAt: Date.now(),
+        updatedAt: now,
       });
     },
   });
@@ -283,29 +286,31 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
   const handleKeyChange = (val: string) => {
     setSongKey(val);
+    const now = Date.now();
     const updatedVersions = (currentSong.versions || []).map(v =>
-      v.id === currentSong.activeVersionId ? { ...v, key: val } : v
+      v.id === currentSong.activeVersionId ? { ...v, key: val, updatedAt: now } : v
     );
     const finalVer = updatedVersions.find(v => v.isFinal) || updatedVersions[0];
     onUpdateSong({
       ...currentSong,
       key: finalVer?.key || val,
       versions: updatedVersions,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
   };
 
   const handleBpmChange = (val: number) => {
     setSongBpm(val);
+    const now = Date.now();
     const updatedVersions = (currentSong.versions || []).map(v =>
-      v.id === currentSong.activeVersionId ? { ...v, bpm: val } : v
+      v.id === currentSong.activeVersionId ? { ...v, bpm: val, updatedAt: now } : v
     );
     const finalVer = updatedVersions.find(v => v.isFinal) || updatedVersions[0];
     onUpdateSong({
       ...currentSong,
       bpm: finalVer?.bpm ?? val,
       versions: updatedVersions,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
   };
 
@@ -317,10 +322,15 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
   const handleStatusChange = (val: 'draft' | 'progress' | 'release' | 'final') => {
     setSongStatus(val);
+    const now = Date.now();
+    const updatedVersions = (currentSong.versions || []).map(v =>
+      v.id === currentSong.activeVersionId ? { ...v, updatedAt: now } : v
+    );
     onUpdateSong({
       ...currentSong,
       status: val,
-      updatedAt: Date.now(),
+      versions: updatedVersions,
+      updatedAt: now,
     });
   };
 
@@ -545,8 +555,9 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
           {/* Status selector custom popover */}
           <div className="relative">
             <button
+              ref={desktopStatusBtnRef}
               type="button"
-              onClick={() => setIsStatusOpen(!isStatusOpen)}
+              onClick={() => setIsStatusOpen((prev) => !prev)}
               className="h-8 flex items-center gap-1.5 px-2.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group"
               title="Ubah Status Progres Lagu"
             >
@@ -561,6 +572,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
               onSelectStatus={handleStatusChange}
               mode={parentAlbum ? 'track' : 'project'}
               align="right"
+              triggerRef={desktopStatusBtnRef}
             />
           </div>
 
@@ -612,8 +624,9 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
             {/* Status selector custom popover */}
             <div className="relative">
               <button
+                ref={mobileStatusBtnRef}
                 type="button"
-                onClick={() => setIsMobileStatusOpen(!isMobileStatusOpen)}
+                onClick={() => setIsMobileStatusOpen((prev) => !prev)}
                 className="h-7.5 flex items-center gap-1 px-2 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[11px] font-mono cursor-pointer shadow-2xs group"
                 title="Ubah Status Progres Lagu"
               >
@@ -628,6 +641,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
                 onSelectStatus={handleStatusChange}
                 mode={parentAlbum ? 'track' : 'project'}
                 align="left"
+                triggerRef={mobileStatusBtnRef}
               />
             </div>
           </div>

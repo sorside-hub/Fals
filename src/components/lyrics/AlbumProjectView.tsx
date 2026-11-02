@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SongDraft } from '../../types';
+import { formatDate } from '../../utils/dateFormatter';
 import {
   ArrowLeft,
   Plus,
@@ -38,6 +39,8 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
   onOpenConceptEditor,
   onConvertTrackToSingle,
 }) => {
+  const desktopStatusBtnRef = useRef<HTMLButtonElement>(null);
+  const mobileStatusBtnRef = useRef<HTMLButtonElement>(null);
   const [title, setTitle] = useState(project.title || '');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -158,8 +161,9 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
           {/* Status selector custom popover */}
           <div className="relative">
             <button
+              ref={desktopStatusBtnRef}
               type="button"
-              onClick={() => setIsStatusOpen(!isStatusOpen)}
+              onClick={() => setIsStatusOpen((prev) => !prev)}
               className="h-8 flex items-center gap-1.5 px-2.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group"
               title="Ubah Status Progres Proyek"
             >
@@ -176,6 +180,7 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
               onSelectStatus={handleStatusChange}
               mode="project"
               align="right"
+              triggerRef={desktopStatusBtnRef}
             />
           </div>
 
@@ -214,8 +219,9 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
             {/* Status selector custom popover */}
             <div className="relative">
               <button
+                ref={mobileStatusBtnRef}
                 type="button"
-                onClick={() => setIsMobileStatusOpen(!isMobileStatusOpen)}
+                onClick={() => setIsMobileStatusOpen((prev) => !prev)}
                 className="h-7.5 flex items-center gap-1 px-2 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[11px] font-mono cursor-pointer shadow-2xs group"
                 title="Ubah Status Progres Proyek"
               >
@@ -232,6 +238,7 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
                 onSelectStatus={handleStatusChange}
                 mode="project"
                 align="left"
+                triggerRef={mobileStatusBtnRef}
               />
             </div>
 
@@ -353,7 +360,6 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                    <ChevronRight className="w-4 h-4 text-[#78716C] group-hover:text-[#1C1917] group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
               );
@@ -418,18 +424,23 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
                     onOpenConceptEditor();
                   }
                 }}
-                className="p-4 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer shadow-2xs group space-y-2.5"
+                className="p-3.5 sm:p-4 bg-[#FFFFFF] border border-[#E5E4DE] hover:border-[#1C1917] rounded-xl transition cursor-pointer shadow-2xs group"
               >
                 <p className="text-xs text-[#78716C] italic leading-relaxed line-clamp-3">
                   "{getConceptExcerpt(project.concept)}"
                 </p>
+              </div>
+            </div>
 
-                <div className="pt-1 flex items-center justify-between border-t border-[#E5E4DE]/60">
-                  <span className="text-[11px] font-bold text-[#1C1917] group-hover:underline flex items-center gap-1">
-                    Buka Editor Konsep
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-[#78716C] group-hover:translate-x-0.5 transition-transform" />
-                </div>
+            {/* Footer Tanggal Proyek Album */}
+            <div className="pt-3 border-t border-[#E5E4DE] text-[11px] font-mono text-[#78716C] flex items-center justify-between gap-2 shrink-0 mt-auto">
+              <div>
+                <span className="opacity-70">createdAt:</span>{' '}
+                <span className="font-bold text-[#44403C]">{formatDate(project.createdAt || project.updatedAt)}</span>
+              </div>
+              <div>
+                <span className="opacity-70">updatedAt:</span>{' '}
+                <span className="font-bold text-[#1C1917]">{formatDate(project.updatedAt)}</span>
               </div>
             </div>
           </div>

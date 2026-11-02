@@ -106,6 +106,7 @@ export interface LyricVersion {
   content: string;
   isFinal: boolean;
   createdAt: number;
+  updatedAt?: number;
   key?: string;
   bpm?: number;
 }
@@ -135,6 +136,7 @@ export interface SongDraft {
   bpm: number;
   timeSignature: string;
   status: SongStatus;
+  createdAt?: number;
   updatedAt: number;
   tags?: string[];
 }

@@ -10,6 +10,7 @@ interface StatusPopoverProps {
   mode?: 'project' | 'track';
   align?: 'left' | 'right';
   className?: string;
+  triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
 export const StatusPopover: React.FC<StatusPopoverProps> = ({
@@ -20,12 +21,18 @@ export const StatusPopover: React.FC<StatusPopoverProps> = ({
   mode = 'project',
   align = 'right',
   className = '',
+  triggerRef,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: Event) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        ref.current &&
+        !ref.current.contains(target) &&
+        (!triggerRef?.current || !triggerRef.current.contains(target))
+      ) {
         onClose();
       }
     };
@@ -37,7 +44,7 @@ export const StatusPopover: React.FC<StatusPopoverProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, triggerRef]);
 
   if (!isOpen) return null;
 

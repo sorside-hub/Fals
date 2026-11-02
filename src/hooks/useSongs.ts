@@ -594,6 +594,7 @@ export function useSongs() {
         bpm: newBpm,
         isFinal: false,
         createdAt: timestamp,
+        updatedAt: timestamp,
       };
       const updatedVersions = [...(song.versions || []), newVersion];
       return {
@@ -607,10 +608,12 @@ export function useSongs() {
   };
 
   const setFinalVersion = (songId: string, versionId: string) => {
+    const now = Date.now();
     setSongs(prev => applyToSongOrTrack(prev, songId, (song) => {
       const updatedVersions = (song.versions || []).map(v => ({
         ...v,
         isFinal: v.id === versionId,
+        updatedAt: v.id === versionId ? now : v.updatedAt,
       }));
       const finalVer = updatedVersions.find(v => v.id === versionId);
       return {
@@ -618,7 +621,7 @@ export function useSongs() {
         key: finalVer?.key || song.key,
         bpm: finalVer?.bpm ?? song.bpm,
         versions: updatedVersions,
-        updatedAt: Date.now(),
+        updatedAt: now,
       };
     }));
   };
@@ -638,7 +641,7 @@ export function useSongs() {
 
   const renameVersion = (songId: string, versionId: string, newName: string) => {
     setSongs(prev => applyToSongOrTrack(prev, songId, (song) => {
-      const updatedVersions = (song.versions || []).map(v => v.id === versionId ? { ...v, name: newName } : v);
+      const updatedVersions = (song.versions || []).map(v => v.id === versionId ? { ...v, name: newName, updatedAt: Date.now() } : v);
       return {
         ...song,
         versions: updatedVersions,
